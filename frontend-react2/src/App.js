@@ -2103,7 +2103,8 @@ export default function App() {
           )}
         </div>
       </div>
-      <ChatWidget />
+      {/* El asistente de chat es opcional: requiere un servicio externo (puerto 8001) */}
+      {process.env.REACT_APP_ENABLE_CHAT === 'true' && <ChatWidget />}
     </div>
   );
 }

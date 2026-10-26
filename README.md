@@ -143,9 +143,10 @@ El archivo `docker-compose.prod.yml` añade la configuración para producción c
 
 ### Asistente de chat (opcional)
 
-El widget flotante de chat se conecta a un servicio aparte en `http://localhost:8001`, que **no está
-incluido** en este repositorio. Sin él, el resto de la aplicación funciona normalmente y el chat muestra un
-aviso de conexión.
+La interfaz incluye un widget de chat, pero está **desactivado por defecto**: se conecta a un servicio
+aparte en `http://localhost:8001` (un agente local con Ollama) que **no forma parte de este repositorio**.
+El resto de la aplicación funciona normalmente sin él. Si tienes ese servicio corriendo, actívalo con
+`REACT_APP_ENABLE_CHAT=true` en `frontend-react2/.env` y reinicia `npm start`.
 
 ## Estructura
 
