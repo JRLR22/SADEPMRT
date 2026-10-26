@@ -1,0 +1,52 @@
+# ── Entornos virtuales ────────────────────────
+venv/
+.venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# ── Base de datos local ───────────────────────
+*.db
+*.sqlite
+*.sqlite3
+data/
+
+# ── Modelos ML — NO copiar al build Docker ────
+# Los modelos se montan como volumen en docker-compose
+# para no inflar la imagen (pueden pesar 1-5 GB)
+models/*.pth
+models/*.pt
+models/*.h5
+models/*.onnx
+
+# ── Uploads locales ───────────────────────────
+uploads/
+static/uploads/
+
+# ── Tests y CI ────────────────────────────────
+tests/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ── IDE y OS ──────────────────────────────────
+.vscode/
+.idea/
+*.DS_Store
+Thumbs.db
+
+# ── Git ───────────────────────────────────────
+.git/
+.gitignore
+
+# ── Logs ──────────────────────────────────────
+*.log
+logs/
+
+# ── Docker ────────────────────────────────────
+Dockerfile
+docker-compose*.yml
+.dockerignore

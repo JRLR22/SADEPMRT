@@ -1,0 +1,43 @@
+# Framework Web
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+
+# Deep Learning
+torch
+torchvision
+opencv-python==4.8.1.78
+
+# Procesamiento
+numpy==1.24.3
+pillow==10.1.0
+
+# Base de Datos
+sqlalchemy==2.0.23
+psycopg2-binary==2.9.9
+
+# Validacion
+pydantic==2.5.0
+pydantic-settings==2.1.0
+
+# Seguridad
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-dotenv==1.0.0
+
+# Logging
+loguru==0.7.2
+
+# Testing
+pytest==7.4.3
+httpx==0.25.2
+
+reportlab
+
+sqlalchemy>=2.0.0
+psycopg2-binary
+alembic
+python-jose[cryptography]
+passlib[bcrypt]
+python-dotenv
+supabase

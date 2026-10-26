@@ -1,0 +1,12 @@
+COPIA AQUI LOS MODELOS (no se suben a git por su tamano)
+
+Clasificacion (ensemble de 3 modelos por enfermedad):
+  pneumonia_densenet121.pth      pneumonia_resnet50.pth      pneumonia_efficientnet_b0.pth
+  covid_19_densenet121.pth       covid_19_resnet50.pth       covid_19_efficientnet_b0.pth
+  tuberculosis_densenet121.pth   tuberculosis_resnet50.pth   tuberculosis_efficientnet_b0.pth
+
+Segmentacion y deteccion:
+  unet_resnet34_best.pth
+  yolov8_chest_best.pt
+
+Los nombres deben coincidir con los de backend/config.py.

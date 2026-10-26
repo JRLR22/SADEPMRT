@@ -1,0 +1,57 @@
+version: "3.9"
+
+# ─────────────────────────────────────────────────────────────
+#  Overrides de PRODUCCIÓN
+#  Uso: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+#  Agrega:
+#   - Puerto 443 con SSL (Let's Encrypt via Certbot)
+#   - Certbot para renovación automática de certificados
+#   - Nginx con HTTPS habilitado
+# ─────────────────────────────────────────────────────────────
+
+services:
+
+  frontend:
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      # Certificados Let's Encrypt (generados por certbot)
+      - certbot_certs:/etc/letsencrypt:ro
+      - certbot_www:/var/www/certbot:ro
+    environment:
+      - DOMAIN=${DOMAIN}
+
+  backend:
+    # En producción, agregar worker adicional si el servidor tiene CPU suficiente
+    command: >
+      uvicorn main:app
+      --host 0.0.0.0
+      --port 8000
+      --workers 4
+      --log-level warning
+
+  # ── Certbot — renueva SSL automáticamente ───────────────
+  certbot:
+    image: certbot/certbot:latest
+    container_name: pulmonar_certbot
+    restart: unless-stopped
+    volumes:
+      - certbot_certs:/etc/letsencrypt
+      - certbot_www:/var/www/certbot
+    # Renovar cada 12h (Let's Encrypt renueva si faltan < 30 días)
+    entrypoint: >
+      /bin/sh -c "trap exit TERM;
+      while :; do
+        certbot renew --webroot -w /var/www/certbot --quiet;
+        sleep 12h & wait $${!};
+      done"
+    networks:
+      - pulmonar_net
+
+volumes:
+  certbot_certs:
+    name: pulmonar_ssl_certs
+  certbot_www:
+    name: pulmonar_certbot_www

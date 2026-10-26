@@ -1,0 +1,134 @@
+/* ============================================================================
+   Estilos globales de interacción, animación y responsive.
+   Las animaciones siguen las pautas de emil-design-eng: cortas (<300ms),
+   ease-out personalizado, sin `transition: all` y con respeto a
+   prefers-reduced-motion.
+   ============================================================================ */
+
+:root {
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --primary: #1a56db;
+}
+
+/* ── Botones: respuesta al hover y al clic ─────────────────────────────── */
+
+button {
+  transition:
+    transform 160ms var(--ease-out),
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    opacity 160ms ease,
+    filter 160ms ease;
+}
+
+button:not(:disabled):active {
+  transform: scale(0.97);
+}
+
+/* Solo en dispositivos con ratón: en táctiles el hover se "pega" al tocar */
+@media (hover: hover) and (pointer: fine) {
+  button:not(:disabled):hover { filter: brightness(0.96); }
+  .nav-btn:not(.active):hover { background: rgba(255, 255, 255, 0.06); color: rgba(255, 255, 255, 0.8); }
+  .dropzone:hover { border-color: var(--primary); background: #eff4ff; }
+  .sample-btn:hover { transform: translateY(-2px); }
+}
+
+/* ── Foco visible (navegación con teclado) ─────────────────────────────── */
+
+:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.login-screen :focus-visible { outline-color: #fff; }
+select:focus-visible { outline: 2px solid var(--primary) !important; outline-offset: 1px; }
+
+input:focus, textarea:focus {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.15);
+}
+input:focus-visible, textarea:focus-visible { outline: none; }
+
+.login-screen input::placeholder { color: rgba(255, 255, 255, 0.35); }
+.login-screen input:focus {
+  border-color: rgba(255, 255, 255, 0.6) !important;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.12);
+}
+
+/* ── Animaciones ───────────────────────────────────────────────────────── */
+
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes overlay-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes modal-in { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+@keyframes chat-in { from { opacity: 0; transform: scale(0.95) translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes reveal { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+.modal-overlay { animation: overlay-in 150ms ease-out; }
+.modal-panel   { animation: modal-in 200ms var(--ease-out); }
+.chat-panel    { transform-origin: bottom right; animation: chat-in 200ms var(--ease-out); }
+.reveal        { animation: reveal 300ms var(--ease-out) backwards; animation-delay: calc(var(--i, 0) * 50ms); }
+
+@media (prefers-reduced-motion: reduce) {
+  .modal-panel, .chat-panel, .reveal { animation-name: overlay-in; }
+  button:not(:disabled):active, .sample-btn:hover { transform: none; }
+}
+
+/* ── Subida de archivos ────────────────────────────────────────────────── */
+
+.dropzone {
+  border: 2px dashed #e2e8f0;
+  border-radius: 12px;
+  padding: 28px 20px;
+  text-align: center;
+  cursor: pointer;
+  background: #f0f4f9;
+  margin-bottom: 16px;
+  transition: border-color 160ms ease, background-color 160ms ease;
+}
+.dropzone.is-dragging { border-color: var(--primary); background: #eff4ff; }
+
+/* ── Comparador original / Grad-CAM ────────────────────────────────────── */
+
+.compare { position: relative; border-radius: 8px; overflow: hidden; border: 1px solid #e2e8f0; line-height: 0; }
+.compare img { width: 100%; display: block; }
+.compare .compare-top { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; }
+.compare .compare-line { position: absolute; top: 0; bottom: 0; width: 2px; background: #fff; box-shadow: 0 0 6px rgba(0, 0, 0, 0.5); }
+.compare .compare-tag { position: absolute; bottom: 8px; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; line-height: 1.4; color: #fff; background: rgba(15, 31, 56, 0.65); pointer-events: none; }
+.compare-range { width: 100%; margin-top: 10px; accent-color: var(--primary); }
+
+/* ── Layout (escritorio) ───────────────────────────────────────────────── */
+
+.sidebar        { width: 220px; }
+.nav-btn        { position: relative; color: rgba(255, 255, 255, 0.5); background: transparent; border: 0; border-left: 2px solid transparent; font-weight: 400; }
+.nav-btn.active { color: #fff; background: rgba(255, 255, 255, 0.1); border-left-color: var(--primary); font-weight: 600; }
+.upload-panel   { flex: 0 0 380px; max-width: 380px; }
+.results-panel  { flex: 1; min-width: 300px; }
+.login-left     { flex: 1; padding: 60px 80px; }
+.login-right    { width: 420px; }
+.login-form     { width: 100%; max-width: 340px; }
+.patients-layout { display: flex; gap: 16px; }
+.patients-list  { width: 240px; }
+
+/* ── Layout (tablet / móvil) ───────────────────────────────────────────── */
+
+@media (max-width: 900px) {
+  .sidebar { width: 64px; }
+  .sidebar .sb-hide { display: none !important; }
+  .sidebar .sb-head { padding: 20px 14px 16px !important; }
+  .sidebar .nav-btn, .sidebar .logout-btn { justify-content: center; padding-left: 0 !important; padding-right: 0 !important; }
+  .sidebar .nav-badge { position: absolute; top: 2px; right: 2px; }
+
+  .upload-panel  { flex: 1 1 100%; max-width: none; }
+  .results-panel { flex-basis: 100%; min-width: 0; }
+
+  .login-screen { flex-direction: column; }
+  .login-left   { padding: 32px 24px; }
+  .login-right  { width: 100%; padding: 32px 24px; border-left: none !important; }
+  .login-title  { font-size: 30px !important; }
+
+  .patients-layout { flex-direction: column; }
+  .patients-list   { width: 100%; }
+
+  .page-pad { padding: 16px !important; }
+}
+
+/* ── Chat flotante ─────────────────────────────────────────────────────── */
+
+.chat-panel { width: min(360px, calc(100vw - 32px)); max-height: calc(100vh - 110px); }

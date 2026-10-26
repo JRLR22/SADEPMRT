@@ -1,0 +1,107 @@
+version: "3.9"
+
+# ─────────────────────────────────────────────────────────────
+#  Sistema Detección Pulmonar — Docker Compose
+#  Servicios: backend (FastAPI) + frontend (React + Nginx)
+#
+#  Uso:
+#    Desarrollo:  docker-compose up --build
+#    Producción:  docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# ─────────────────────────────────────────────────────────────
+
+services:
+
+  # ── FastAPI Backend ──────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: pulmonar_backend
+    restart: unless-stopped
+
+    env_file:
+      - .env
+
+    environment:
+      - APP_ENV=production
+      - DATABASE_URL=${DATABASE_URL:-sqlite:///./data/lung_detection.db}
+      - SECRET_KEY=${SECRET_KEY}
+      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-60}
+      - UPLOAD_DIR=/app/uploads
+      - MODELS_DIR=/app/models
+
+    volumes:
+      # Persistir base de datos SQLite
+      - db_data:/app/data
+      # Persistir imágenes subidas y resultados Grad-CAM
+      - uploads_data:/app/uploads
+      # Montar modelos (.pth / .pt) desde el host — no se copian al build
+      # para no inflar la imagen Docker (pueden pesar varios GB)
+      - ./backend/models:/app/models:ro
+
+    # El backend NO expone puerto al host directamente en producción.
+    # Nginx (frontend) lo accede por red interna Docker.
+    expose:
+      - "8000"
+
+    # En desarrollo, descomenta esto para acceder directo a /docs:
+    ports:
+      - "8000:8000"
+
+    networks:
+      - pulmonar_net
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 90s    # Los modelos tardan en cargar
+      retries: 5
+
+    # Límites de recursos (ajusta según el servidor)
+    deploy:
+      resources:
+        limits:
+          memory: 4G        # PyTorch necesita bastante RAM
+        reservations:
+          memory: 2G
+
+  # ── React + Nginx Frontend ───────────────────────────────
+  frontend:
+    build:
+      context: ./frontend-react2
+      dockerfile: Dockerfile
+      args:
+        - REACT_APP_API_URL=/api   # Nginx proxea /api → backend:8000
+    container_name: pulmonar_frontend
+    restart: unless-stopped
+
+    ports:
+      - "${FRONTEND_PORT:-80}:80"    # Acceso público por HTTP
+
+    depends_on:
+      backend:
+        condition: service_healthy   # Espera que el backend esté listo
+
+    networks:
+      - pulmonar_net
+
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:80/nginx-health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+
+# ── Redes ───────────────────────────────────────────────────
+networks:
+  pulmonar_net:
+    driver: bridge
+    name: pulmonar_network
+
+# ── Volúmenes persistentes ───────────────────────────────────
+volumes:
+  db_data:
+    name: pulmonar_db_data
+  uploads_data:
+    name: pulmonar_uploads

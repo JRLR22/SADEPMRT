@@ -1,0 +1,70 @@
+# ============================================================================
+# .GITIGNORE - ARCHIVOS QUE NO SE SUBEN A GIT
+# ============================================================================
+
+# Archivos de entorno (contienen contraseñas)
+.env
+.env.local
+.env.*.local
+
+# Entorno virtual de Python
+venv/
+env/
+ENV/
+.venv
+
+# Cache de Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Modelos de IA (son muy pesados, súbelos a otro lugar)
+backend/models/*.pth
+backend/models/*.pt
+backend/models/*.h5
+
+# Logs
+logs/
+*.log
+
+# Base de datos local
+*.db
+*.sqlite
+*.sqlite3
+
+# Configuración de IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# Node modules (para React)
+node_modules/
+frontend-react/node_modules/
+app-mobile/node_modules/
+
+# Build de React
+frontend-react/build/
+app-mobile/.expo/
+app-mobile/.expo-shared/
+
+# Archivos temporales
+*.tmp
+*.temp
+.cache/
+# Copia de seguridad local antes de limpiar datos de prueba
+backend/backup_antes_de_limpiar/
+
+# Resultados y radiografías generadas al usar la app (no se suben)
+backend/uploads/*/*
+!backend/uploads/*/.gitkeep
+
+# Build del frontend actual
+frontend-react2/build/
