@@ -1,12 +1,6 @@
-# ============================================================================
-# MAIN.PY - SISTEMA COMPLETO LOCAL
-# Ensemble (DenseNet + ResNet + EfficientNet) + YOLO + U-Net + Grad-CAM
-# Sin Supabase — todo en SQLite + disco local
-# ============================================================================
-
 from fastapi import FastAPI, File, UploadFile, HTTPException, Query, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, StreamingResponse, JSONResponse
+from fastapi.responses import StreamingResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 from sqlalchemy.orm import Session
@@ -14,17 +8,15 @@ import torch
 import torch.nn as nn
 import torchvision.models as tv_models
 import torchvision.transforms as transforms
-import time, uuid, json, cv2, os, shutil
+import time, uuid, json, cv2, os
 import numpy as np
 from PIL import Image
 from io import BytesIO
 from datetime import datetime, timedelta
 from pathlib import Path
 from loguru import logger
-import pydicom
 import io
 from dicom_utils import dicom_to_pil as _dicom_to_pil_util, format_dicom_date
-import json
 import collections
 import threading
 
@@ -38,33 +30,21 @@ from app.services.storage import StorageService
 
 from sqlalchemy import text
 
-# ============================================================================
-# CONSTANTES DE VALIDACIÓN
-# ============================================================================
 
 MAX_FILE_SIZE_MB    = 20
 MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024
 ALLOWED_MIME_TYPES  = {"image/jpeg", "image/png", "image/bmp", "image/tiff", "image/webp"}
 ALLOWED_EXTENSIONS  = {".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".tif", ".webp", ".dcm"}
 
-# ============================================================================
-# RATE LIMITER (in-memory, thread-safe, sliding window)
-# ============================================================================
 
 class RateLimiter:
-    """
-    Sliding-window rate limiter sin dependencias externas.
-    Almacena timestamps de requests por clave (user_id o IP).
-    """
+    """Limitador de peticiones en memoria con ventana deslizante."""
     def __init__(self):
         self._store: dict[str, collections.deque] = {}
         self._lock  = threading.Lock()
 
     def is_allowed(self, key: str, max_requests: int, window_seconds: int) -> tuple[bool, int]:
-        """
-        Retorna (allowed, retry_after_seconds).
-        retry_after_seconds es 0 si allowed=True.
-        """
+        """Devuelve (permitido, segundos hasta poder reintentar)."""
         now = time.time()
         cutoff = now - window_seconds
 
@@ -74,7 +54,6 @@ class RateLimiter:
 
             dq = self._store[key]
 
-            # Eliminar entradas fuera de la ventana
             while dq and dq[0] < cutoff:
                 dq.popleft()
 
@@ -87,7 +66,7 @@ class RateLimiter:
             return True, 0
 
     def cleanup(self):
-        """Limpia claves inactivas (llamar periódicamente si el servidor es long-running)."""
+        """Borra las claves sin actividad en la última hora."""
         now = time.time()
         with self._lock:
             dead = [k for k, dq in self._store.items() if not dq or dq[-1] < now - 3600]
@@ -97,21 +76,18 @@ class RateLimiter:
 
 _rate_limiter = RateLimiter()
 
-# Límites configurables por tipo de operación
 RATE_LIMITS = {
-    "predict":    {"max_requests": 30,  "window_seconds": 3600},   # 30 predicciones/hora
-    "report":     {"max_requests": 20,  "window_seconds": 3600},   # 20 reportes/hora
-    "studies":    {"max_requests": 200, "window_seconds": 3600},   # 200 lecturas/hora
-    "validate":   {"max_requests": 100, "window_seconds": 3600},   # 100 validaciones/hora
+    "predict":    {"max_requests": 30,  "window_seconds": 3600},
+    "report":     {"max_requests": 20,  "window_seconds": 3600},
+    "studies":    {"max_requests": 200, "window_seconds": 3600},
+    "validate":   {"max_requests": 100, "window_seconds": 3600},
 }
 
 
 def check_rate_limit(request: Request, current_user: User, operation: str = "predict"):
-    """
-    Dependency que lanza 429 si el usuario superó su límite.
-    Usa user_id como clave para que sea por cuenta, no por IP.
-    """
+    """Lanza 429 si el usuario superó el límite de esa operación."""
     cfg = RATE_LIMITS.get(operation, RATE_LIMITS["predict"])
+    # por cuenta y no por ip
     key = f"{operation}:{current_user.id}"
 
     allowed, retry_after = _rate_limiter.is_allowed(
@@ -130,7 +106,7 @@ def check_rate_limit(request: Request, current_user: User, operation: str = "pre
         )
 
 
-# Factories para los distintos límites (necesario para Depends)
+# depends no permite pasar la operación como argumento: una función por cada una
 def rate_limit_predict(request: Request, current_user: User = Depends(get_current_user)):
     check_rate_limit(request, current_user, "predict")
 
@@ -144,16 +120,8 @@ def rate_limit_validate(request: Request, current_user: User = Depends(get_curre
     check_rate_limit(request, current_user, "validate")
 
 
-# ============================================================================
-# VALIDACIÓN DE ARCHIVOS
-# ============================================================================
-
 def validate_image_file(contents: bytes, filename: str, allow_dicom: bool = False):
-    """
-    Valida tamaño, extensión y firma mágica del archivo.
-    Lanza HTTPException 400 si algo falla.
-    """
-    # Tamaño
+    """Valida tamaño, extensión y firma del archivo; lanza 400 si algo falla."""
     if len(contents) > MAX_FILE_SIZE_BYTES:
         raise HTTPException(
             status_code=400,
@@ -163,7 +131,6 @@ def validate_image_file(contents: bytes, filename: str, allow_dicom: bool = Fals
     if len(contents) < 8:
         raise HTTPException(status_code=400, detail="Archivo demasiado pequeño o vacío.")
 
-    # Extensión
     ext = Path(filename).suffix.lower()
     if ext not in ALLOWED_EXTENSIONS:
         raise HTTPException(
@@ -171,13 +138,13 @@ def validate_image_file(contents: bytes, filename: str, allow_dicom: bool = Fals
             detail=f"Extensión '{ext}' no permitida. Permitidas: {', '.join(ALLOWED_EXTENSIONS)}"
         )
 
-    # DICOM no necesita validación de imagen PIL
+    # pil no abre dicom; ese formato se valida al convertirlo
     if ext == ".dcm":
         if not allow_dicom:
             raise HTTPException(status_code=400, detail="DICOM no permitido en este endpoint.")
         return
 
-    # Firma mágica (magic bytes) para imágenes
+    # la extensión no basta: se comprueba la firma real del archivo
     magic_signatures = {
         b'\xff\xd8\xff':       "JPEG",
         b'\x89PNG\r\n\x1a\n': "PNG",
@@ -199,7 +166,6 @@ def validate_image_file(contents: bytes, filename: str, allow_dicom: bool = Fals
             detail="El archivo no parece ser una imagen válida (firma no reconocida)."
         )
 
-    # Intentar abrir con PIL como validación final
     try:
         img = Image.open(BytesIO(contents))
         img.verify()   # detecta archivos truncados/corruptos
@@ -207,18 +173,11 @@ def validate_image_file(contents: bytes, filename: str, allow_dicom: bool = Fals
         raise HTTPException(status_code=400, detail="El archivo de imagen está corrupto o es inválido.")
 
 
-# ============================================================================
-# ESTADO GLOBAL
-# ============================================================================
-
 ensemble_models: dict = {}   # {disease: {densenet, resnet, efficient}}
 yolo_model              = None
 unet_model              = None
 storage_service         = None
 
-# ============================================================================
-# CARGA DE MODELOS
-# ============================================================================
 
 def _load_densenet(path: Path, num_classes: int, device):
     model = tv_models.densenet121(weights=None)
@@ -257,15 +216,12 @@ def _load_unet(path: Path, device):
     model.load_state_dict(ckpt['model_state_dict'])
     return model.to(device).eval()
 
-# ============================================================================
-# CICLO DE VIDA
-# ============================================================================
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global ensemble_models, yolo_model, unet_model, storage_service
 
-    logger.info("🚀 Iniciando aplicación...")
+    logger.info("Iniciando aplicación...")
 
     validate_config()
 
@@ -273,7 +229,6 @@ async def lifespan(app: FastAPI):
     device = torch.device(settings.DEVICE)
     logger.info(f"   Device: {device}")
 
-    # ── Ensemble clasificación ───────────────────────────────────────────────
     configs = {
         'pneumonia': {
             'num_classes': 2,
@@ -297,23 +252,21 @@ async def lifespan(app: FastAPI):
 
     for disease, cfg in configs.items():
         nc = cfg['num_classes']
-        logger.info(f"   • Cargando ensemble {disease}...")
+        logger.info(f"   Cargando ensemble {disease}...")
         ensemble_models[disease] = {
             'densenet':  _load_densenet(cfg['densenet'],  nc, device),
             'resnet':    _load_resnet(cfg['resnet'],    nc, device),
             'efficient': _load_efficientnet(cfg['efficient'], nc, device),
         }
 
-    # ── YOLOv8 ──────────────────────────────────────────────────────────────
-    logger.info("   • Cargando YOLOv8...")
+    logger.info("   Cargando YOLOv8...")
     from ultralytics import YOLO
     yolo_model = YOLO(str(settings.YOLO_MODEL_PATH))
 
-    # ── U-Net ────────────────────────────────────────────────────────────────
-    logger.info("   • Cargando U-Net...")
+    logger.info("   Cargando U-Net...")
     unet_model = _load_unet(settings.UNET_MODEL_PATH, device)
 
-    logger.success("✅ Todos los modelos cargados")
+    logger.success("Todos los modelos cargados")
     yield
 
     ensemble_models.clear()
@@ -321,9 +274,6 @@ async def lifespan(app: FastAPI):
         torch.cuda.empty_cache()
     _rate_limiter.cleanup()
 
-# ============================================================================
-# APP
-# ============================================================================
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -345,10 +295,9 @@ app.include_router(auth_router)
 os.makedirs("uploads", exist_ok=True)
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
-# ============================================================================
-# UTILIDADES
-# ============================================================================
 
+# las radiografías son en gris, pero los clasificadores parten de imagenet:
+# esperan 3 canales y su normalización
 TRANSFORM = transforms.Compose([
     transforms.Grayscale(num_output_channels=3),
     transforms.Resize((224, 224)),
@@ -356,6 +305,7 @@ TRANSFORM = transforms.Compose([
     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
 ])
 
+# la u-net se entrenó con 1 canal a 512x512
 UNET_TRANSFORM = transforms.Compose([
     transforms.Grayscale(num_output_channels=1),
     transforms.Resize((512, 512)),
@@ -364,24 +314,19 @@ UNET_TRANSFORM = transforms.Compose([
 
 
 def _unique_name(prefix: str, ext: str = "png") -> str:
-    """Genera un nombre de archivo único con timestamp + uuid."""
     ts  = datetime.utcnow().strftime("%Y%d%m_%H%M%S")
     uid = str(uuid.uuid4())[:8]
     return f"{prefix}_{ts}_{uid}.{ext}"
 
 
 def preprocess_image(image_bytes: bytes):
-    """Preprocesa la imagen para clasificación."""
     image = Image.open(BytesIO(image_bytes)).convert('RGB')
     tensor = TRANSFORM(image).unsqueeze(0)
     return tensor, image
 
 
 def ensemble_predict(disease: str, tensor: torch.Tensor) -> dict:
-    """
-    Promedia las probabilidades de los 3 modelos (soft voting).
-    Retorna: {probs_avg, predicted_class, confidence, detail}
-    """
+    """Soft voting: promedia las probabilidades de los 3 modelos."""
     device     = torch.device(settings.DEVICE)
     tensor     = tensor.to(device)
     models     = ensemble_models[disease]
@@ -424,10 +369,7 @@ def generate_gradcam(disease: str, tensor: torch.Tensor, original_image: Image.I
 
 
 def run_yolo(image_bytes: bytes) -> tuple[bytes, list]:
-    """
-    Corre YOLOv8 sobre la imagen.
-    Retorna (imagen_anotada_bytes, detecciones_list).
-    """
+    """Devuelve (png anotado, lista de detecciones)."""
     img_array = np.frombuffer(image_bytes, np.uint8)
     img_bgr   = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
 
@@ -448,10 +390,7 @@ def run_yolo(image_bytes: bytes) -> tuple[bytes, list]:
 
 
 def run_segmentation(image_bytes: bytes) -> bytes:
-    """
-    Corre U-Net sobre la imagen.
-    Retorna máscara superpuesta como PNG bytes.
-    """
+    """Devuelve la máscara pulmonar superpuesta en verde, como png."""
     device = torch.device(settings.DEVICE)
     image  = Image.open(BytesIO(image_bytes)).convert('RGB')
     tensor = UNET_TRANSFORM(image).unsqueeze(0).to(device)
@@ -471,14 +410,12 @@ def run_segmentation(image_bytes: bytes) -> bytes:
 
 
 def dicom_to_pil(dicom_bytes: bytes) -> tuple:
-    """
-    Convierte DICOM a imagen PIL + extrae metadatos.
-    Delegado a dicom_utils para evitar duplicación.
-    """
+    """Convierte DICOM a imagen PIL y extrae sus metadatos."""
     return _dicom_to_pil_util(dicom_bytes)
 
 
 def get_clinical_interpretation(confidence: float, disease: str) -> dict:
+    # tb exige más confianza, igual que su umbral de decisión (TB_THRESHOLD = 0.75)
     thresh = {
         'tuberculosis': {'high': 0.90, 'medium': 0.75},
         'pneumonia':    {'high': 0.85, 'medium': 0.70},
@@ -512,6 +449,7 @@ def get_clinical_interpretation(confidence: float, disease: str) -> dict:
 
 
 def get_validation_metrics(disease: str) -> dict:
+    # valores fijos; no se recalculan en ejecución
     return {
         'pneumonia':    {'accuracy': '92.75%', 'auc': '0.9720', 'f1': '0.93'},
         'covid':        {'accuracy': '98.50%', 'auc': '0.9910', 'f1': '0.98'},
@@ -520,7 +458,6 @@ def get_validation_metrics(disease: str) -> dict:
 
 
 def _log_audit(db: Session, user_id, action: str, resource_type: str, metadata: dict):
-    """Helper centralizado para audit logs."""
     audit = AuditLog(
         user_id=user_id,
         action=action,
@@ -575,9 +512,6 @@ def _save_study_and_prediction(
 
     return study, pred
 
-# ============================================================================
-# ENDPOINTS
-# ============================================================================
 
 @app.get("/health")
 async def health_check():
@@ -613,8 +547,6 @@ async def health_check():
     )
 
 
-# ── Helper interno para predict ─────────────────────────────────────────────
-
 async def _predict(
     file, disease: str, disease_enum, class_names: list,
     threshold: float, crop_points, run_yolo_flag: bool,
@@ -623,14 +555,12 @@ async def _predict(
     start    = time.time()
     contents = await file.read()
 
-    # Validar archivo
     validate_image_file(contents, file.filename, allow_dicom=False)
 
     points = json.loads(crop_points) if crop_points else None
 
     tensor, original_image = preprocess_image(contents)
 
-    # Ensemble
     result          = ensemble_predict(disease, tensor)
     probs_avg       = result['probs_avg']
     predicted_class = result['predicted_class']
@@ -641,7 +571,6 @@ async def _predict(
     probabilities    = {class_names[i]: float(probs_avg[i]) for i in range(len(class_names))}
     processing_ms    = (time.time() - start) * 1000
 
-    # Grad-CAM
     gradcam_url   = None
     heatmap_bytes = generate_gradcam(disease, tensor, original_image, predicted_class)
     if heatmap_bytes:
@@ -649,7 +578,6 @@ async def _predict(
             heatmap_bytes, _unique_name("gradcam"), "gradcam"
         )
 
-    # YOLO
     yolo_url   = None
     detections = []
     if run_yolo_flag:
@@ -658,7 +586,6 @@ async def _predict(
             yolo_bytes, _unique_name("yolo"), "yolo"
         )
 
-    # Segmentación U-Net
     seg_url = None
     if run_seg_flag:
         seg_bytes = run_segmentation(contents)
@@ -720,8 +647,6 @@ async def _predict(
     return response
 
 
-# ── Endpoints de predicción ──────────────────────────────────────────────────
-
 @app.post("/predict/pneumonia")
 async def predict_pneumonia(
     file:        UploadFile = File(...),
@@ -742,7 +667,7 @@ async def predict_pneumonia(
         raise
     except Exception as e:
         db.rollback()
-        logger.error(f"❌ predict/pneumonia: {e}")
+        logger.error(f"predict/pneumonia: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -766,7 +691,7 @@ async def predict_covid(
         raise
     except Exception as e:
         db.rollback()
-        logger.error(f"❌ predict/covid: {e}")
+        logger.error(f"predict/covid: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -790,11 +715,9 @@ async def predict_tuberculosis(
         raise
     except Exception as e:
         db.rollback()
-        logger.error(f"❌ predict/tuberculosis: {e}")
+        logger.error(f"predict/tuberculosis: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-
-# ── Estudios ─────────────────────────────────────────────────────────────────
 
 @app.get("/studies")
 async def get_studies(
@@ -937,8 +860,6 @@ async def validate_prediction(
     }
 
 
-# ── Reporte PDF ───────────────────────────────────────────────────────────────
-
 @app.get("/studies/{study_id}/report")
 async def generate_pdf_report(
     study_id:     str,
@@ -954,13 +875,12 @@ async def generate_pdf_report(
         from reportlab.platypus import (
             SimpleDocTemplate, Table, TableStyle,
             Paragraph, Spacer, Image as RLImage,
-            HRFlowable, KeepTogether
+            KeepTogether
         )
         from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-        from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_JUSTIFY
+        from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY
         from reportlab.pdfgen import canvas as rl_canvas
 
-        # ── Colores del sistema ─────────────────────────────────────────────
         BLUE       = colors.HexColor('#1a56db')
         BLUE_LT    = colors.HexColor('#eff4ff')
         BLUE_MID   = colors.HexColor('#c7d7f9')
@@ -975,7 +895,6 @@ async def generate_pdf_report(
         WHITE      = colors.white
         BORDER     = colors.HexColor('#e2e8f0')
 
-        # ── Carga del estudio ───────────────────────────────────────────────
         s = (
             db.query(Study)
             .options(joinedload(Study.predictions))
@@ -1007,7 +926,7 @@ async def generate_pdf_report(
             'TUBERCULOSIS': 'Tuberculosis',
         }.get(str(s.disease_type).upper().replace('DISEASETYPE.', ''), str(s.disease_type))
 
-        # Hora local Mazatlán para el reporte impreso
+        # created_at está en utc; el reporte se imprime en hora de mazatlán
         from datetime import timezone
         import pytz
         mzt    = pytz.timezone('America/Mazatlan')
@@ -1022,14 +941,12 @@ async def generate_pdf_report(
                 if marker in url:
                     relative = url.split(marker)[-1]
                     return os.path.join('uploads', relative.replace('/', os.sep))
-            # Ruta relativa directa
             if url.startswith('uploads/'):
                 return url
             return None
 
-        # ── Clases de canvas para header/footer ────────────────────────────
         class HeaderFooterCanvas(rl_canvas.Canvas):
-            """Dibuja header azul y footer en cada página."""
+            """Guarda las páginas antes de dibujarlas para poder poner "Página X de N"."""
             def __init__(self, *args, **kwargs):
                 super().__init__(*args, **kwargs)
                 self.pages = []
@@ -1049,25 +966,20 @@ async def generate_pdf_report(
             def _draw_header_footer(self, page_num, page_count):
                 w, h = letter
 
-                # ── Barra azul superior ──
                 self.setFillColor(BLUE)
                 self.rect(0, h - 0.55 * inch, w, 0.55 * inch, fill=1, stroke=0)
 
-                # Nombre del sistema en la barra
                 self.setFillColor(WHITE)
                 self.setFont('Helvetica-Bold', 11)
                 self.drawString(0.5 * inch, h - 0.35 * inch, 'rt26 — Sistema de Detección Pulmonar IA v2.0')
 
-                # Nro de página derecha
                 self.setFont('Helvetica', 9)
                 self.drawRightString(w - 0.5 * inch, h - 0.35 * inch, f'Página {page_num} de {page_count}')
 
-                # ── Línea decorativa azul claro bajo el header ──
                 self.setStrokeColor(BLUE_MID)
                 self.setLineWidth(0.5)
                 self.line(0.5 * inch, h - 0.6 * inch, w - 0.5 * inch, h - 0.6 * inch)
 
-                # ── Footer ──
                 self.setStrokeColor(BORDER)
                 self.setLineWidth(0.5)
                 self.line(0.5 * inch, 0.55 * inch, w - 0.5 * inch, 0.55 * inch)
@@ -1079,7 +991,6 @@ async def generate_pdf_report(
                 self.drawRightString(w - 0.5 * inch, 0.35 * inch,
                     f'Estudio ID: {str(s.id)[:8].upper()}')
 
-        # ── Documento ──────────────────────────────────────────────────────
         buffer = BytesIO()
         doc = SimpleDocTemplate(
             buffer,
@@ -1090,11 +1001,9 @@ async def generate_pdf_report(
             bottomMargin=0.85 * inch,  # espacio para el footer
         )
 
-        # ── Estilos ────────────────────────────────────────────────────────
         styles = getSampleStyleSheet()
 
         def section_header(text):
-            """Retorna la fila de encabezado de sección con fondo azul."""
             t = Table([[Paragraph(
                 f'<font color="white"><b>{text}</b></font>',
                 ParagraphStyle('sh', fontName='Helvetica-Bold', fontSize=10,
@@ -1111,7 +1020,6 @@ async def generate_pdf_report(
             return t
 
         def info_table(rows, col_widths=None):
-            """Tabla de datos con filas alternadas."""
             cw = col_widths or [1.8 * inch, 5.0 * inch]
             t  = Table(rows, colWidths=cw)
             style = [
@@ -1132,10 +1040,8 @@ async def generate_pdf_report(
 
         sp = lambda n: Spacer(1, n)
 
-        # ── Contenido ──────────────────────────────────────────────────────
         elements = []
 
-        # ── Título principal ────────────────────────────────────────────────
         elements.append(sp(0.15 * inch))
         elements.append(Paragraph(
             'REPORTE DE ANÁLISIS RADIOLÓGICO',
@@ -1150,7 +1056,6 @@ async def generate_pdf_report(
         ))
         elements.append(sp(0.25 * inch))
 
-        # ── RESULTADO DESTACADO (cajón grande arriba) ───────────────────────
         conf_pct = f'{pred.confidence * 100:.1f}%'
         risk_lvl = clinical.get('level', '—')
         risk_msg = clinical.get('recommendation', '—')
@@ -1186,7 +1091,6 @@ async def generate_pdf_report(
         elements.append(result_table)
         elements.append(sp(0.22 * inch))
 
-        # ── INFORMACIÓN DEL ESTUDIO ─────────────────────────────────────────
         elements.append(section_header('INFORMACIÓN DEL ESTUDIO'))
         elements.append(info_table([
             ['ID del estudio:',  str(s.id)],
@@ -1198,7 +1102,6 @@ async def generate_pdf_report(
         ]))
         elements.append(sp(0.22 * inch))
 
-        # ── IMÁGENES (2x2 más grandes) ──────────────────────────────────────
         img_items = [
             (s.original_image_url,        'Radiografía Original'),
             (pred.gradcam_image_url,       'Grad-CAM (activación)'),
@@ -1263,7 +1166,6 @@ async def generate_pdf_report(
             sp(0.22 * inch),
         ]))
 
-        # ── PROBABILIDADES ──────────────────────────────────────────────────
         elements.append(section_header('PROBABILIDADES POR CLASE'))
         elements.append(sp(4))
 
@@ -1293,7 +1195,6 @@ async def generate_pdf_report(
         elements.append(pt)
         elements.append(sp(0.22 * inch))
 
-        # ── NIVEL DE CONFIANZA CLÍNICA ──────────────────────────────────────
         if clinical:
             lvl_color = {
                 'Alto':  GREEN,
@@ -1334,7 +1235,6 @@ async def generate_pdf_report(
             elements.append(clin_table)
             elements.append(sp(0.22 * inch))
 
-        # ── AVISO LEGAL (inline, no página separada) ────────────────────────
         aviso = Table(
             [[Paragraph(
                 '<b>AVISO LEGAL:</b> Este sistema es una herramienta de apoyo diagnóstico basada en '
@@ -1358,7 +1258,6 @@ async def generate_pdf_report(
         ]))
         elements.append(aviso)
 
-        # ── Build ───────────────────────────────────────────────────────────
         doc.build(elements, canvasmaker=HeaderFooterCanvas)
 
         buffer.seek(0)
@@ -1375,8 +1274,6 @@ async def generate_pdf_report(
         logger.error(f'PDF error: {e}')
         raise HTTPException(status_code=500, detail=str(e))
 
-
-# ── predict/auto ─────────────────────────────────────────────────────────────
 
 @app.post("/predict/auto")
 async def predict_auto(
@@ -1425,7 +1322,7 @@ async def predict_auto(
         top_disease = ranking[0][0]
         top_result  = ranking[0][1]
 
-        # Grad-CAM del más probable
+        # grad-cam solo de la enfermedad más probable
         gradcam_url   = None
         heatmap_bytes = generate_gradcam(
             top_disease, tensor, original_image,
@@ -1436,7 +1333,6 @@ async def predict_auto(
                 heatmap_bytes, _unique_name("gradcam"), "gradcam"
             )
 
-        # YOLO
         yolo_url   = None
         detections = []
         if run_yolo_flag:
@@ -1445,7 +1341,6 @@ async def predict_auto(
                 yolo_bytes, _unique_name("yolo"), "yolo"
             )
 
-        # Segmentación
         seg_url = None
         if run_seg_flag:
             seg_bytes = run_segmentation(contents)
@@ -1498,11 +1393,9 @@ async def predict_auto(
         raise
     except Exception as e:
         db.rollback()
-        logger.error(f"❌ predict/auto: {e}")
+        logger.error(f"predict/auto: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-
-# ── predict/dicom ─────────────────────────────────────────────────────────────
 
 @app.post("/predict/dicom")
 async def predict_dicom(
@@ -1522,15 +1415,13 @@ async def predict_dicom(
 
         validate_image_file(contents, file.filename, allow_dicom=True)
 
-        # Convertir DICOM → PIL
         pil_image, dicom_metadata = dicom_to_pil(contents)
 
-        # Guardar DICOM original
         dicom_path = Path("uploads/dicom") / file.filename
         dicom_path.parent.mkdir(parents=True, exist_ok=True)
         dicom_path.write_bytes(contents)
 
-        # PIL → PNG bytes para el pipeline
+        # el resto del pipeline trabaja con bytes de imagen, no con objetos pil
         buf = io.BytesIO()
         pil_image.save(buf, format="PNG")
         png_bytes = buf.getvalue()
@@ -1570,7 +1461,6 @@ async def predict_dicom(
         top_disease = ranking[0][0]
         top_result  = ranking[0][1]
 
-        # Grad-CAM
         gradcam_url   = None
         heatmap_bytes = generate_gradcam(
             top_disease, tensor, original_image,
@@ -1581,7 +1471,6 @@ async def predict_dicom(
                 heatmap_bytes, _unique_name("gradcam"), "gradcam"
             )
 
-        # YOLO
         yolo_url   = None
         detections = []
         if run_yolo_flag:
@@ -1590,7 +1479,6 @@ async def predict_dicom(
                 yolo_bytes, _unique_name("yolo"), "yolo"
             )
 
-        # Segmentación
         seg_url = None
         if run_seg_flag:
             seg_bytes = run_segmentation(png_bytes)
@@ -1644,11 +1532,9 @@ async def predict_dicom(
         raise
     except Exception as e:
         db.rollback()
-        logger.error(f"❌ predict/dicom: {e}")
+        logger.error(f"predict/dicom: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-
-# ── Dashboard stats ───────────────────────────────────────────────────────────
 
 @app.get("/dashboard/stats")
 async def dashboard_stats(
@@ -1659,10 +1545,9 @@ async def dashboard_stats(
 
     is_admin = current_user.role in ['admin', 'radiologist']
 
-    # ── Filtro base por usuario ──────────────────────────────────────────
+    # admin y radiólogo ven todos los estudios; el resto, solo los suyos
     study_filter = [] if is_admin else [Study.uploaded_by == current_user.id]
 
-    # ── KPIs principales ─────────────────────────────────────────────────
     total_studies = db.query(func.count(Study.id)).filter(*study_filter).scalar() or 0
 
     total_preds = (
@@ -1685,7 +1570,6 @@ async def dashboard_stats(
         .scalar() or 0
     )
 
-    # ── Distribución por enfermedad ───────────────────────────────────────
     dist_rows = (
         db.query(
             Study.disease_type,
@@ -1702,6 +1586,7 @@ async def dashboard_stats(
     )
 
     def normalize_disease(raw):
+        # el enum puede llegar como 'DiseaseType.PNEUMONIA' o como 'pneumonia'
         r = str(raw).lower().replace('diseasetype.', '')
         if 'pneumonia' in r: return 'pneumonia'
         if 'covid'     in r: return 'covid'
@@ -1729,7 +1614,6 @@ async def dashboard_stats(
         dist_map.get('tuberculosis', {'disease': 'tuberculosis', 'total': 0, 'positive': 0, 'negative': 0, 'positive_rate': 0, 'avg_confidence': 0}),
     ]
 
-    # ── Timeline últimos 30 días ──────────────────────────────────────────
     today           = datetime.utcnow().date()
     thirty_days_ago = today - timedelta(days=30)
 
@@ -1744,6 +1628,7 @@ async def dashboard_stats(
     )
 
     timeline_map = {str(row.date): int(row.count) for row in timeline_rows}
+    # los días sin estudios van con 0 para que la gráfica no tenga huecos
     timeline_full = [
         {
             'date':  (thirty_days_ago + timedelta(days=i)).isoformat() + 'Z',

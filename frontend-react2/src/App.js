@@ -82,7 +82,6 @@ function ErrorState({ message, onRetry }) {
   );
 }
 
-/* ─── CSS-in-JS tokens ──────────────────────────────────────────────────── */
 const T = {
   bg:        '#f0f4f9',
   surface:   '#ffffff',
@@ -108,7 +107,6 @@ const T = {
   shadowMd:  '0 4px 24px rgba(0,0,0,0.10)',
 };
 
-/* ─── Shared style helpers ───────────────────────────────────────────────── */
 const card = (extra = {}) => ({
   background: T.surface,
   border: `1px solid ${T.border}`,
@@ -140,7 +138,6 @@ const btn = (variant = 'primary', extra = {}) => {
   };
 };
 
-/* ─── FHIR export ────────────────────────────────────────────────────────── */
 function exportFHIR(study, pred) {
   const isPos = pred && !pred.prediction?.toLowerCase().includes('normal');
   const fhir  = {
@@ -164,9 +161,6 @@ function exportFHIR(study, pred) {
   URL.revokeObjectURL(url);
 }
 
-/* ════════════════════════════════════════════════════════════════════════════
-   LOGIN
-══════════════════════════════════════════════════════════════════════════════*/
 function Login({ onLogin }) {
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
@@ -193,7 +187,6 @@ function Login({ onLogin }) {
       minHeight: '100vh', display: 'flex', fontFamily: T.font,
       background: 'linear-gradient(135deg, #0d1f3c 0%, #1a3a6b 50%, #0e2d5e 100%)',
     }}>
-      {/* Left panel */}
       <div className="login-left" style={{
         display: 'flex', flexDirection: 'column',
         justifyContent: 'center', color: '#fff',
@@ -228,7 +221,6 @@ function Login({ onLogin }) {
         </div>
       </div>
 
-      {/* Right panel */}
       <div className="login-right" style={{
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         background: 'rgba(255,255,255,0.04)', backdropFilter: 'blur(20px)',
@@ -298,9 +290,6 @@ function Login({ onLogin }) {
   );
 }
 
-/* ════════════════════════════════════════════════════════════════════════════
-   ROLE BADGE
-══════════════════════════════════════════════════════════════════════════════*/
 const ROLE_META = {
   admin:       { label: 'Admin',      color: '#6d28d9', bg: '#ede9fe' },
   radiologist: { label: 'Radiólogo',  color: T.primary, bg: T.primaryLt },
@@ -312,9 +301,6 @@ function RoleBadge({ role }) {
   return <span style={badge(m.color, m.bg)}><Shield size={10} />{m.label}</span>;
 }
 
-/* ════════════════════════════════════════════════════════════════════════════
-   SIDEBAR
-══════════════════════════════════════════════════════════════════════════════*/
 function Sidebar({ active, onChange, onLogout, user, pendingCount = 0 }) {
   const canValidate = user?.role === 'admin' || user?.role === 'radiologist';
   const items = [
@@ -332,7 +318,6 @@ function Sidebar({ active, onChange, onLogout, user, pendingCount = 0 }) {
       position: 'sticky', top: 0, height: '100vh', flexShrink: 0,
       fontFamily: T.font,
     }}>
-      {/* Logo */}
       <div className="sb-head" style={{ padding: '24px 20px 20px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{
@@ -359,7 +344,6 @@ function Sidebar({ active, onChange, onLogout, user, pendingCount = 0 }) {
         )}
       </div>
 
-      {/* Nav */}
       <nav style={{ flex: 1, padding: '12px 10px' }}>
         {items.map(({ key, Icon, label, badge: badgeCount }) => {
           const isActive = active === key;
@@ -386,7 +370,6 @@ function Sidebar({ active, onChange, onLogout, user, pendingCount = 0 }) {
         })}
       </nav>
 
-      {/* Logout */}
       <div style={{ padding: '12px 10px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
         <button onClick={onLogout} className="logout-btn" aria-label="Cerrar sesión" title="Cerrar sesión" style={{
           display: 'flex', alignItems: 'center', gap: 10, width: '100%',
@@ -401,9 +384,6 @@ function Sidebar({ active, onChange, onLogout, user, pendingCount = 0 }) {
   );
 }
 
-/* ════════════════════════════════════════════════════════════════════════════
-   KPI CARD
-══════════════════════════════════════════════════════════════════════════════*/
 function KpiCard({ Icon, label, value, color, subtitle }) {
   return (
     <div style={{
@@ -558,9 +538,6 @@ function MiniBar({ value, color }) {
   );
 }
 
-/* ════════════════════════════════════════════════════════════════════════════
-   DASHBOARD
-══════════════════════════════════════════════════════════════════════════════*/
 const DISEASE_COLORS = { pneumonia: T.primary, covid: T.danger, tuberculosis: T.warn };
 const DISEASE_NAMES  = { pneumonia: 'Neumonía', covid: 'COVID-19', tuberculosis: 'Tuberculosis' };
 
@@ -606,7 +583,6 @@ function Dashboard() {
   return (
     <div style={{ paddingBottom: 32, fontFamily: T.font }}>
 
-      {/* Encabezado */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
         <div>
           <h2 style={{ fontSize: 20, fontWeight: 700, color: T.text, margin: 0, letterSpacing: '-0.01em' }}>
@@ -621,7 +597,6 @@ function Dashboard() {
         </span>
       </div>
 
-      {/* KPIs */}
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 20 }}>
         <KpiCard Icon={Hospital}    label="Estudios totales"  value={kpis.total_studies}      color={T.primary} />
         <KpiCard Icon={Cpu}         label="Predicciones"      value={kpis.total_predictions}  color="#8b5cf6" />
@@ -631,7 +606,6 @@ function Dashboard() {
         <KpiCard Icon={Layers}      label="Estudios DICOM"    value={kpis.dicom_studies}      color="#0ea5e9" />
       </div>
 
-      {/* Métricas del modelo */}
       <div style={card({ background: T.primaryLt, border: `1px solid #c7d7f9`, marginBottom: 20 })}>
         <div style={{ fontSize: 11, fontWeight: 700, color: T.primary, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 14 }}>
           Métricas de Validación del Modelo (ensemble)
@@ -662,10 +636,8 @@ function Dashboard() {
         </div>
       </div>
 
-      {/* Gráficas */}
       <div style={{ display: 'flex', gap: 14, marginBottom: 14, flexWrap: 'wrap' }}>
 
-        {/* Donut */}
         <div style={card({ flex: 1, minWidth: 280, marginBottom: 0 })}>
           <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 16 }}>
             Distribución por enfermedad
@@ -676,7 +648,6 @@ function Dashboard() {
           }
         </div>
 
-        {/* Confianza con MiniBar */}
         <div style={card({ flex: 1, minWidth: 280, marginBottom: 0 })}>
           <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 16 }}>
             Confianza y tasa positiva
@@ -715,7 +686,6 @@ function Dashboard() {
         </div>
       </div>
 
-      {/* Timeline */}
       <div style={card({ marginBottom: 14 })}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: T.text }}>Estudios — últimos 14 días</div>
@@ -756,7 +726,6 @@ function Dashboard() {
         </ResponsiveContainer>
       </div>
 
-      {/* Tabla detallada */}
       <div style={card()}>
         <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 14 }}>
           Resumen por enfermedad
@@ -813,9 +782,6 @@ function Dashboard() {
   );
 }
 
-/* ════════════════════════════════════════════════════════════════════════════
-   HISTORIAL
-══════════════════════════════════════════════════════════════════════════════*/
 function History() {
   const [studies,    setStudies]    = useState([]);
   const [loading,    setLoading]    = useState(true);
@@ -944,7 +910,6 @@ const exportCSV = () => {
 
       {error && <div style={{ marginBottom: 12 }}><ErrorState message={error} /></div>}
 
-      {/* Filtros */}
       <div style={{
         ...card({ marginBottom: 16 }),
         display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end',
@@ -1007,7 +972,6 @@ const exportCSV = () => {
         )}
       </div>
 
-      {/* Lista */}
       {filtered.length === 0 ? (
         <div style={{ ...card(), textAlign: 'center', padding: 60, color: T.textDim }}>
           <ClipboardList size={40} style={{ marginBottom: 12, opacity: 0.3 }} />
@@ -1070,9 +1034,6 @@ const exportCSV = () => {
   );
 }
 
-/* ════════════════════════════════════════════════════════════════════════════
-   PACIENTES
-══════════════════════════════════════════════════════════════════════════════*/
 function Patients() {
   const [studies,   setStudies]   = useState([]);
   const [loading,   setLoading]   = useState(true);
@@ -1101,7 +1062,6 @@ function Patients() {
     </div>
   );
 
-  // Agrupar por paciente
   const patients = {};
   studies.forEach(s => {
     const key = s.patient_identifier || 'Sin identificador';
@@ -1109,7 +1069,6 @@ function Patients() {
     patients[key].push(s);
   });
 
-  // Filtrar por búsqueda
   const patientKeys = Object.keys(patients).filter(name =>
     name.toLowerCase().includes(busqueda.toLowerCase())
   );
@@ -1132,10 +1091,8 @@ function Patients() {
         </div>
       ) : (
         <div className="patients-layout">
-          {/* Lista de pacientes */}
           <div className="patients-list" style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
 
-            {/* Buscador */}
             <div style={{
               display: 'flex', alignItems: 'center', gap: 8,
               padding: '8px 12px', borderRadius: 8,
@@ -1203,7 +1160,6 @@ function Patients() {
             )}
           </div>
 
-          {/* Detalle del paciente seleccionado */}
           {selected && patients[selected] ? (
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={card({ background: T.primaryLt, border: `1px solid #c7d7f9`, marginBottom: 12 })}>
@@ -1260,9 +1216,6 @@ function Patients() {
   );
 }
 
-/* ════════════════════════════════════════════════════════════════════════════
-   VALIDATION MODAL
-══════════════════════════════════════════════════════════════════════════════*/
 function ValidationModal({ study, pred, onClose, onSaved }) {
   const [result, setResult]   = useState('confirmed');
   const [notes, setNotes]     = useState('');
@@ -1310,7 +1263,6 @@ function ValidationModal({ study, pred, onClose, onSaved }) {
           </button>
         </div>
 
-        {/* Study info */}
         <div style={card({ display: 'flex', gap: 14, marginBottom: 16 })}>
           {study.original_image_url && (
             <img src={study.original_image_url} alt="rx" style={{
@@ -1334,7 +1286,6 @@ function ValidationModal({ study, pred, onClose, onSaved }) {
           </div>
         </div>
 
-        {/* Images */}
         {pred && (
           <div style={{ display: 'flex', gap: 8, marginBottom: 16, overflowX: 'auto' }}>
             {[
@@ -1353,7 +1304,6 @@ function ValidationModal({ study, pred, onClose, onSaved }) {
           </div>
         )}
 
-        {/* Decision */}
         <div style={{ marginBottom: 16 }}>
           <div style={{ fontSize: 12, fontWeight: 600, color: T.textMid, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>
             Decisión del radiólogo
@@ -1378,7 +1328,6 @@ function ValidationModal({ study, pred, onClose, onSaved }) {
           </div>
         </div>
 
-        {/* Notes */}
         <div style={{ marginBottom: 20 }}>
           <div style={{ fontSize: 12, fontWeight: 600, color: T.textMid, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
             Notas <span style={{ fontWeight: 400, opacity: 0.6 }}>(opcional)</span>
@@ -1410,9 +1359,6 @@ function ValidationModal({ study, pred, onClose, onSaved }) {
   );
 }
 
-/* ════════════════════════════════════════════════════════════════════════════
-   PANEL RADIÓLOGO
-══════════════════════════════════════════════════════════════════════════════*/
 function RadiologistPanel() {
   const [studies, setStudies]   = useState([]);
   const [loading, setLoading]   = useState(true);
@@ -1478,7 +1424,6 @@ function RadiologistPanel() {
         </div>
       </div>
 
-      {/* Tabs */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 20, borderBottom: `2px solid ${T.border}` }}>
         {[{ key: 'queue', label: 'Cola de revisión', Icon: ClipboardList }, { key: 'audit', label: 'Audit trail', Icon: Eye }].map(t => (
           <button key={t.key} onClick={() => setTab(t.key)} style={{
@@ -1659,9 +1604,6 @@ function RadiologistPanel() {
   );
 }
 
-/* ════════════════════════════════════════════════════════════════════════════
-   ANÁLISIS
-══════════════════════════════════════════════════════════════════════════════*/
 function ProbBar({ label, value, color }) {
   const pct = (value * 100).toFixed(1);
   return (
@@ -1850,7 +1792,6 @@ function Analysis() {
 
   return (
     <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', fontFamily: T.font }}>
-      {/* Upload panel */}
       <div className="upload-panel" style={{ background: T.surface, borderRadius: T.radiusLg, padding: 24, boxShadow: T.shadow, border: `1px solid ${T.border}` }}>
         <h2 style={{ fontSize: 17, fontWeight: 700, color: T.text, margin: '0 0 6px', letterSpacing: '-0.01em' }}>
           Subir Radiografía
@@ -1937,7 +1878,6 @@ function Analysis() {
         )}
       </div>
 
-      {/* Results panel */}
       <div className="results-panel" style={{ background: T.surface, borderRadius: T.radiusLg, padding: 24, boxShadow: T.shadow, border: `1px solid ${T.border}` }}>
         <h2 style={{ fontSize: 17, fontWeight: 700, color: T.text, margin: '0 0 20px', letterSpacing: '-0.01em' }}>Resultados</h2>
         {result ? (
@@ -1966,7 +1906,6 @@ function Analysis() {
 
             {result.ranking?.map((item, i) => <DiseaseCard key={item.disease} item={item} index={i} />)}
 
-            {/* Visualizations */}
             <div style={card()}>
               <div style={{ fontSize: 13, fontWeight: 600, color: T.text, marginBottom: 4 }}>Visualizaciones</div>
               <div style={{ fontSize: 11, color: T.textDim, marginBottom: 12 }}>
@@ -2040,9 +1979,6 @@ function Analysis() {
   );
 }
 
-/* ════════════════════════════════════════════════════════════════════════════
-   MAIN APP
-══════════════════════════════════════════════════════════════════════════════*/
 export default function App() {
   const [loggedIn,     setLoggedIn]     = useState(!!localStorage.getItem('token'));
   const [page,         setPage]         = useState('analysis');
@@ -2078,7 +2014,6 @@ export default function App() {
       <Sidebar active={page} onChange={setPage} onLogout={() => { localStorage.removeItem('token'); setLoggedIn(false); setUser(null); setPage('analysis'); }} user={user} pendingCount={pendingCount} />
 
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'auto' }}>
-        {/* Top bar */}
         <div style={{ background: T.surface, borderBottom: `1px solid ${T.border}`, padding: '14px 28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 1px 0 rgba(0,0,0,0.04)' }}>
           <div>
             <h1 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: T.text, letterSpacing: '-0.01em' }}>{PAGE_TITLES[page]}</h1>

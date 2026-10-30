@@ -1,7 +1,3 @@
-# ============================================================================
-# SECURITY - JWT Y PASSWORD HASHING
-# ============================================================================
-
 from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt

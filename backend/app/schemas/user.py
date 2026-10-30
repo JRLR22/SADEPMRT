@@ -1,6 +1,3 @@
-# ============================================================================
-# USER SCHEMAS - SQLite compatible
-# ============================================================================
 from pydantic import BaseModel, EmailStr, Field, ConfigDict
 from typing import Optional
 from datetime import datetime
@@ -34,7 +31,7 @@ class UserLogin(BaseModel):
 
 
 class UserResponse(UserBase):
-    id: str        # ← str en vez de UUID
+    id: str        # uuid guardado como texto
     is_active: bool
     is_verified: bool
     created_at: datetime

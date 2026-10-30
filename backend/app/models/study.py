@@ -1,7 +1,3 @@
-# ============================================================================
-# STUDY.PY - MODELOS DE BD (SQLite compatible, sin PostgreSQL/JSONB/UUID)
-# ============================================================================
-
 from sqlalchemy import (
     Column, String, Integer, Float, Boolean,
     DateTime, ForeignKey, Text, Enum
@@ -19,6 +15,7 @@ class DiseaseType(str, enum.Enum):
     TUBERCULOSIS = "tuberculosis"
 
 
+# los campos json se guardan serializados en text: sqlite no tiene jsonb
 class Study(Base):
     __tablename__ = "studies"
 
@@ -30,12 +27,11 @@ class Study(Base):
     original_image_url  = Column(String(500), nullable=False)
     file_size           = Column(Integer, nullable=True)
     file_format         = Column(String(10), nullable=True)
-    roi_coordinates     = Column(Text, nullable=True)   # JSON serializado como Text
+    roi_coordinates     = Column(Text, nullable=True)
     disease_type        = Column(Enum(DiseaseType), nullable=False)
-    dicom_metadata      = Column(Text, nullable=True)   # JSON serializado como Text
     study_date          = Column(DateTime(timezone=True), server_default=func.now())
     created_at          = Column(DateTime(timezone=True), server_default=func.now())
-    dicom_metadata      = Column(Text,    nullable=True)   # JSON con metadatos DICOM
+    dicom_metadata      = Column(Text,    nullable=True)
     source              = Column(String(20), default="upload")  # "upload" o "dicom"
 
     predictions = relationship("Prediction", back_populates="study", cascade="all, delete-orphan")
@@ -48,16 +44,16 @@ class Prediction(Base):
     study_id                = Column(String(36), ForeignKey("studies.id"), nullable=False)
     prediction              = Column(String(100), nullable=False)
     confidence              = Column(Float, nullable=False)
-    probabilities           = Column(Text, nullable=False)   # JSON serializado
+    probabilities           = Column(Text, nullable=False)
     model_version           = Column(String(50), nullable=False)
     threshold_used          = Column(Float, nullable=True)
     processing_time_ms      = Column(Float, nullable=True)
     gradcam_enabled         = Column(Boolean, default=True)
     gradcam_image_url       = Column(String(500), nullable=True)
-    yolo_image_url          = Column(String(500), nullable=True)   # NUEVO: YOLO
-    segmentation_image_url  = Column(String(500), nullable=True)   # NUEVO: U-Net
-    ensemble_detail         = Column(Text, nullable=True)          # NUEVO: detalle ensemble
-    clinical_interpretation = Column(Text, nullable=True)          # JSON serializado
+    yolo_image_url          = Column(String(500), nullable=True)
+    segmentation_image_url  = Column(String(500), nullable=True)
+    ensemble_detail         = Column(Text, nullable=True)
+    clinical_interpretation = Column(Text, nullable=True)
     risk_level              = Column(String(20), nullable=True)
     is_validated            = Column(Boolean, default=False)
     validated_by            = Column(String(36), ForeignKey("users.id"), nullable=True)
@@ -79,5 +75,5 @@ class AuditLog(Base):
     resource_id   = Column(String(36), nullable=True)
     ip_address    = Column(String(45), nullable=True)
     user_agent    = Column(Text, nullable=True)
-    meta_data      = Column(Text, nullable=True)   # JSON serializado
+    meta_data      = Column(Text, nullable=True)
     created_at    = Column(DateTime(timezone=True), server_default=func.now())

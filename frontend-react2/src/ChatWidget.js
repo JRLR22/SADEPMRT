@@ -1,23 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Bot, X, Send, RotateCcw, Paperclip } from 'lucide-react';
 
-
-/**
- * ChatWidget - Asistente IA flotante para rt26
- * Se conecta a agent_api.py (puerto 8001) vía POST /chat
- *
- * Uso en App.js:
- *   import ChatWidget from './ChatWidget';
- *   ...
- *   <ChatWidget />   (dentro del layout principal, antes del último </div>)
- */
+// asistente flotante; habla por POST /chat con un servicio aparte (agent_api.py, puerto 8001)
 
 const AGENT_API_URL = 'http://localhost:8001';
 const AZUL = '#1a56db';
 
-// ---------- Renderizador de Markdown simple (sin dependencias externas) ----------
-// Soporta: ### encabezados, **negritas**, - listas. Suficiente para los
-// reportes que genera el agente, sin necesitar instalar una librería nueva.
+// markdown mínimo (### títulos, **negritas**, - listas): basta para lo que
+// devuelve el agente y evita añadir una dependencia
 
 function renderInline(text, keyPrefix) {
   const partes = text.split(/(\*\*[^*]+\*\*)/g);
@@ -251,7 +241,6 @@ const enviarImagen = async () => {
     <div style={styles.contenedor}>
       {abierto && (
         <div className="chat-panel" style={styles.panel} role="dialog" aria-label="Asistente IA">
-          {/* Header */}
           <div style={styles.header}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <Bot size={18} />
@@ -276,7 +265,6 @@ const enviarImagen = async () => {
             </div>
           </div>
 
-          {/* Mensajes */}
           <div ref={scrollRef} style={styles.mensajesArea}>
             {mensajes.map((m, i) => (
               <div
@@ -299,7 +287,6 @@ const enviarImagen = async () => {
             )}
           </div>
 
-          {/* Input */}
 <div style={styles.inputArea}>
   <input
     type="file"
@@ -341,7 +328,6 @@ const enviarImagen = async () => {
         </div>
       )}
 
-      {/* Botón flotante */}
       <button
         onClick={() => setAbierto(!abierto)}
         style={styles.botonFlotante}

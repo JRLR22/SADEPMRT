@@ -39,12 +39,11 @@ services:
       # para no inflar la imagen Docker (pueden pesar varios GB)
       - ./backend/models:/app/models:ro
 
-    # El backend NO expone puerto al host directamente en producción.
-    # Nginx (frontend) lo accede por red interna Docker.
+    # nginx (frontend) llega al backend por la red interna de docker
     expose:
       - "8000"
 
-    # En desarrollo, descomenta esto para acceder directo a /docs:
+    # publicado en el host para usar /docs; docker-compose.prod.yml no lo quita
     ports:
       - "8000:8000"
 

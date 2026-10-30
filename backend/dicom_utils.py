@@ -6,16 +6,12 @@ from pydicom.errors import InvalidDicomError
 
 
 def dicom_to_pil(dicom_bytes: bytes) -> tuple[Image.Image, dict]:
-    """
-    Convierte bytes DICOM a imagen PIL normalizada + metadatos del estudio.
-    Maneja DICOM con y sin pixel data comprimido.
-    """
+    """Convierte bytes DICOM a imagen PIL RGB normalizada y extrae metadatos."""
     try:
         dcm = pydicom.dcmread(io.BytesIO(dicom_bytes))
     except InvalidDicomError:
         raise ValueError("El archivo no es un DICOM válido.")
 
-    # --- Extraer metadatos ---
     metadata = {
         "patient_name":    str(getattr(dcm, "PatientName",    "Desconocido")),
         "patient_id":      str(getattr(dcm, "PatientID",      "")),
@@ -33,7 +29,6 @@ def dicom_to_pil(dicom_bytes: bytes) -> tuple[Image.Image, dict]:
         "exposure":        str(getattr(dcm, "Exposure", "")),
     }
 
-    # --- Convertir pixel array ---
     try:
         img_array = dcm.pixel_array
     except Exception as e:
@@ -41,7 +36,7 @@ def dicom_to_pil(dicom_bytes: bytes) -> tuple[Image.Image, dict]:
 
     img_array = img_array.astype(np.float32)
 
-    # Aplicar VOI LUT si existe (Window Center/Width)
+    # aplica la ventana del equipo (window center/width) si viene en el archivo
     if hasattr(dcm, "WindowCenter") and hasattr(dcm, "WindowWidth"):
         wc = float(dcm.WindowCenter) if not isinstance(dcm.WindowCenter, pydicom.multival.MultiValue) \
              else float(dcm.WindowCenter[0])
@@ -51,18 +46,16 @@ def dicom_to_pil(dicom_bytes: bytes) -> tuple[Image.Image, dict]:
         img_max = wc + ww / 2
         img_array = np.clip(img_array, img_min, img_max)
 
-    # Normalizar a 0-255
     arr_min, arr_max = img_array.min(), img_array.max()
     if arr_max > arr_min:
         img_array = (img_array - arr_min) / (arr_max - arr_min) * 255.0
     img_array = img_array.astype(np.uint8)
 
-    # Aplicar PhotometricInterpretation si es MONOCHROME1 (invertir)
+    # en monochrome1 el 0 es blanco: se invierte para que todas queden igual
     photometric = str(getattr(dcm, "PhotometricInterpretation", "MONOCHROME2"))
     if photometric == "MONOCHROME1":
         img_array = 255 - img_array
 
-    # Convertir a PIL RGB
     if len(img_array.shape) == 2:
         pil_image = Image.fromarray(img_array, mode="L").convert("RGB")
     elif len(img_array.shape) == 3 and img_array.shape[2] == 3:

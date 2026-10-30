@@ -1,7 +1,3 @@
-# ============================================================================
-# USER MODEL
-# ============================================================================
-
 from sqlalchemy import Column, String, Boolean, DateTime, Enum
 from sqlalchemy.sql import func
 import uuid as uuid_pkg

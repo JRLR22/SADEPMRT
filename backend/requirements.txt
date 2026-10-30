@@ -1,40 +1,40 @@
-# ── Web framework ──────────────────────────────
+# web
 fastapi==0.111.0
 uvicorn[standard]==0.29.0
 python-multipart==0.0.9
 
-# ── Base de datos ──────────────────────────────
+# base de datos
 sqlalchemy==2.0.30
 alembic==1.13.1
 
-# ── Autenticación ──────────────────────────────
+# autenticación
 passlib[bcrypt]==1.7.4
 python-jose[cryptography]==3.3.0
 bcrypt==4.1.3
 
-# ── Deep Learning ──────────────────────────────
-# NOTA: Para producción con GPU, reemplazar con:
+# deep learning
+# con gpu, en lugar de torch==2.3.0:
 # torch==2.3.0+cu118 --extra-index-url https://download.pytorch.org/whl/cu118
 torch==2.3.0
 torchvision==0.18.0
 efficientnet-pytorch==0.7.1
 
-# ── Segmentación y detección ───────────────────
+# segmentación y detección
 segmentation-models-pytorch==0.3.3
 ultralytics==8.2.18
 
-# ── Imágenes y visión ──────────────────────────
+# imágenes
 opencv-python-headless==4.9.0.80
 Pillow==10.3.0
 numpy<2.0
 
-# ── DICOM ──────────────────────────────────────
+# dicom
 pydicom==2.4.4
 
-# ── PDF Reports ────────────────────────────────
+# reportes pdf
 reportlab==4.2.0
 
-# ── Utilidades ─────────────────────────────────
+# utilidades
 loguru==0.7.2
 python-dotenv==1.0.1
 pydantic==2.7.1

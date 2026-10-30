@@ -1,9 +1,5 @@
-/* ============================================================================
-   Estilos globales de interacción, animación y responsive.
-   Las animaciones siguen las pautas de emil-design-eng: cortas (<300ms),
-   ease-out personalizado, sin `transition: all` y con respeto a
-   prefers-reduced-motion.
-   ============================================================================ */
+/* interacción, animación y responsive. animaciones cortas (<300ms), con
+   ease-out propio, sin `transition: all` y respetando prefers-reduced-motion. */
 
 :root {
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
