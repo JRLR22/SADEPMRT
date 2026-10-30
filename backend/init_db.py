@@ -12,10 +12,7 @@ from app.models.study import Study, Prediction, AuditLog
 from app.core.security import get_password_hash
 from sqlalchemy.orm import Session
 from loguru import logger
-import os
-from dotenv import load_dotenv
 
-load_dotenv()
 
 def init_database():
     """Crea todas las tablas en la base de datos"""
@@ -34,9 +31,12 @@ def init_database():
         logger.info(f"Tablas en la base de datos: {', '.join(tables)}")
 
         logger.info("Creando usuario administrador...")
-        create_admin_user()
+        created = create_admin_user()
 
         logger.success("Base de datos inicializada correctamente")
+        if not created:
+            logger.info("El usuario admin@hospital.com ya existe; no se cambió su contraseña.")
+            return
         logger.info("""
 ╔══════════════════════════════════════════════════════════╗
 ║     BASE DE DATOS LISTA                                  ║
@@ -55,7 +55,7 @@ def init_database():
 
 
 def create_admin_user():
-    """Crea un usuario administrador por defecto"""
+    """Crea el administrador por defecto; devuelve False si ya existía."""
 
     from sqlalchemy.orm import Session
 
@@ -67,7 +67,7 @@ def create_admin_user():
 
         if existing_admin:
             logger.info("Usuario admin ya existe, omitiendo...")
-            return
+            return False
 
         admin = User(
             email="admin@hospital.com",
@@ -82,25 +82,12 @@ def create_admin_user():
         session.commit()
 
         logger.success("Usuario administrador creado")
+        return True
 
 
 if __name__ == "__main__":
     logger.info("Iniciando script de inicialización...")
-
-    db_url = os.getenv("DATABASE_URL")
-    if not db_url or "sqlite" in db_url:
-        logger.error("""
-ERROR: DATABASE_URL no configurado correctamente
-
-Por favor edita tu archivo .env y agrega:
-DATABASE_URL="postgresql://postgres.xxxxx:PASSWORD@....supabase.com:6543/postgres"
-
-Obtén esta URL desde:
-1. https://supabase.com/dashboard
-2. Settings → Database → Connection string → URI
-        """)
-        sys.exit(1)
-
-    logger.info(f"Conectando a: {db_url[:50]}...")
+    # misma conexión que la api: DATABASE_URL, o sqlite en ./lung_detection.db por defecto
+    logger.info(f"Conectando a: {engine.url}")
 
     init_database()

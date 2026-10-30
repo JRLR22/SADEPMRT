@@ -1,6 +1,16 @@
 from pydantic_settings import BaseSettings
 from pathlib import Path
 
+# claves de ejemplo del repo (config, Dockerfile, .env.example) o vacía si
+# docker-compose recibe SECRET_KEY sin valor; con ellas cualquiera puede firmar tokens
+PLACEHOLDER_SECRET_KEYS = {
+    "",
+    "cambia-esta-clave-en-produccion",
+    "change-me-in-production",
+    "CAMBIA-ESTO-POR-UNA-CLAVE-SEGURA",
+    "CHANGE-THIS-IN-PRODUCTION",
+}
+
 
 class Settings(BaseSettings):
 
@@ -8,6 +18,7 @@ class Settings(BaseSettings):
     APP_VERSION: str = "2.0.0"
     DEBUG:       bool = True
     ENVIRONMENT: str = "development"
+    APP_ENV:     str = "development"   # el dockerfile y docker-compose lo ponen en "production"
 
     HOST:    str = "0.0.0.0"
     PORT:    int = 8000
@@ -63,7 +74,17 @@ settings = Settings()
 
 
 def validate_config():
-    """Valida que los modelos existan antes de arrancar."""
+    """Valida la clave de firma y que los modelos existan antes de arrancar."""
+    if settings.SECRET_KEY in PLACEHOLDER_SECRET_KEYS:
+        if settings.APP_ENV == "production":
+            raise RuntimeError(
+                "\nSECRET_KEY no definido: en producción no se arranca con la clave de ejemplo.\n"
+                "Pásalo como variable de entorno (por ejemplo en el .env de docker-compose).\n"
+                'Genera uno con: python -c "import secrets; print(secrets.token_urlsafe(48))"\n'
+            )
+        print("AVISO: SECRET_KEY no definido; se usa una clave de ejemplo que solo vale para desarrollo. "
+              "Defínelo en backend/.env.")
+
     required = {
         "Pneumonia DenseNet":    settings.PNEUMONIA_DENSENET_PATH,
         "Pneumonia ResNet":      settings.PNEUMONIA_RESNET_PATH,
@@ -86,8 +107,5 @@ def validate_config():
             "\n".join(f"  - {m}" for m in missing) +
             f"\n\nCopia los .pth y .pt a: {settings.MODELS_DIR}\n"
         )
-
-    if settings.SECRET_KEY == "cambia-esta-clave-en-produccion":
-        print("AVISO: se usa el SECRET_KEY por defecto. Define uno propio en .env antes de publicar.")
 
     print("Configuración validada")

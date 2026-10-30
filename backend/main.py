@@ -314,7 +314,7 @@ UNET_TRANSFORM = transforms.Compose([
 
 
 def _unique_name(prefix: str, ext: str = "png") -> str:
-    ts  = datetime.utcnow().strftime("%Y%d%m_%H%M%S")
+    ts  = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
     uid = str(uuid.uuid4())[:8]
     return f"{prefix}_{ts}_{uid}.{ext}"
 
@@ -462,7 +462,7 @@ def _log_audit(db: Session, user_id, action: str, resource_type: str, metadata: 
         user_id=user_id,
         action=action,
         resource_type=resource_type,
-        metadata=json.dumps(metadata),
+        meta_data=json.dumps(metadata),
     )
     db.add(audit)
 
