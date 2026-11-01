@@ -1,3 +1,4 @@
+from pydantic import field_validator
 from pydantic_settings import BaseSettings
 from pathlib import Path
 
@@ -24,7 +25,8 @@ class Settings(BaseSettings):
     PORT:    int = 8000
     WORKERS: int = 1
 
-    ALLOWED_ORIGINS: list = [
+    # el tipo admite str para que pydantic-settings no exija json en el .env
+    ALLOWED_ORIGINS: list[str] | str = [
         "http://localhost:3000",
         "http://localhost:19006",
         "http://localhost:8081",
@@ -69,9 +71,18 @@ class Settings(BaseSettings):
     MAX_FILE_SIZE:       int = 10 * 1024 * 1024
     ALLOWED_EXTENSIONS:  set = {".jpg", ".jpeg", ".png"}
 
+    @field_validator("ALLOWED_ORIGINS", mode="before")
+    @classmethod
+    def split_origins(cls, value):
+        if isinstance(value, str):
+            return [origin.strip() for origin in value.split(",") if origin.strip()]
+        return value
+
     class Config:
         env_file      = ".env"
         case_sensitive = True
+        # el .env también lleva variables solo de docker-compose (FRONTEND_PORT, DOMAIN...)
+        extra         = "ignore"
 
 
 settings = Settings()

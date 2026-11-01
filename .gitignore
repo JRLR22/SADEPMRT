@@ -63,8 +63,10 @@ app-mobile/.expo-shared/
 backend/backup_antes_de_limpiar/
 
 # Resultados y radiografías generadas al usar la app (no se suben)
-backend/uploads/*/*
-!backend/uploads/*/.gitkeep
+# (las carpetas se reincluyen porque git no recupera archivos de una carpeta ignorada)
+backend/uploads/**
+!backend/uploads/**/
+!backend/uploads/**/.gitkeep
 
 # Build del frontend actual
 frontend-react2/build/
