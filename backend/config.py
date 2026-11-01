@@ -62,6 +62,10 @@ class Settings(BaseSettings):
     ALGORITHM:                   str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
 
+    # administrador inicial que crea init_db.py; sin contraseña, genera una aleatoria
+    ADMIN_EMAIL:    str = "admin@hospital.com"
+    ADMIN_PASSWORD: str = ""
+
     MAX_FILE_SIZE:       int = 10 * 1024 * 1024
     ALLOWED_EXTENSIONS:  set = {".jpg", ".jpeg", ".png"}
 

@@ -111,7 +111,9 @@ $env:PYTHONUTF8=1; python main.py
 
 La API queda en `http://localhost:8000` y su documentación en `http://localhost:8000/docs`.
 
-> `init_db.py` crea un administrador con credenciales de ejemplo. **Cámbialas antes de publicar nada.**
+> `init_db.py` crea el administrador con `ADMIN_EMAIL` y `ADMIN_PASSWORD` de `backend/.env`. Si no defines
+> `ADMIN_PASSWORD`, genera una contraseña aleatoria y **la muestra una sola vez en la consola**: guárdala.
+> Si ese usuario ya existe, no cambia su contraseña.
 
 ### 3. Frontend
 
