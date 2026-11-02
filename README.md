@@ -58,7 +58,7 @@ pacientes identificables.
 | Archivo | Imagen original | Dataset | Cita |
 | --- | --- | --- | --- |
 | `ejemplo-1.jpg` | `Tuberculosis-100.png` | "Tuberculosis (TB) Chest X-ray Database": T. Rahman, A. Khandakar, M. E. H. Chowdhury, IEEE Dataport, 2020, DOI [10.21227/mps8-kb56](https://doi.org/10.21227/mps8-kb56) | Rahman et al., "Reliable Tuberculosis Detection using Chest X-ray with Deep Learning, Segmentation and Visualization", *IEEE Access*, 2020 |
-| `ejemplo-2.jpg` | `person102_bacteria_487.jpeg` | "Chest X-Ray Images (Pneumonia)": Kermany, Zhang y Goldbaum, Mendeley Data, 2018, DOI [10.17632/rscbjbr9sj.3](https://doi.org/10.17632/rscbjbr9sj.3), licencia CC BY 4.0 | Kermany et al., *Cell* 172(5):1122–1131, 2018, DOI [10.1016/j.cell.2018.02.010](https://doi.org/10.1016/j.cell.2018.02.010) |
+| `ejemplo-2.jpg` | `person102_bacteria_487.jpeg` | "Chest X-Ray Images (Pneumonia)": Kermany, Zhang y Goldbaum, Mendeley Data, 2018, DOI [10.17632/rscbjbr9sj.2](https://doi.org/10.17632/rscbjbr9sj.2), licencia CC BY 4.0 | Kermany et al., *Cell* 172(5):1122–1131, 2018, DOI [10.1016/j.cell.2018.02.010](https://doi.org/10.1016/j.cell.2018.02.010) |
 | `ejemplo-3.jpg` | `person1950_bacteria_4881.jpeg` | Igual que `ejemplo-2.jpg` | Igual que `ejemplo-2.jpg` |
 
 ## Limitaciones y generalización
