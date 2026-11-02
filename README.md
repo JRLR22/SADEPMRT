@@ -1,5 +1,9 @@
 # rt26 · Diagnóstico pulmonar asistido por IA
 
+https://github.com/user-attachments/assets/a1798fa8-626f-40df-bc2e-557830e157bf
+
+*Voz generada con [elevenlabs.io](https://elevenlabs.io).*
+
 Prototipo de análisis de radiografías de tórax para apoyar la detección de **neumonía, COVID-19 y tuberculosis**.
 Combina un ensemble de tres modelos de clasificación por enfermedad con tres visualizaciones: **Grad-CAM**
 (dónde "mira" el modelo), **YOLOv8** (detección de lesiones) y **U-Net** (segmentación pulmonar).
@@ -17,6 +21,12 @@ Combina un ensemble de tres modelos de clasificación por enfermedad con tres vi
 - Historial con filtros y exportación a CSV, informe en PDF por estudio, vista por paciente y dashboard.
 - Flujo de validación por radiólogo (roles `admin` / `radiologist`), con registro de auditoría y
   exportación FHIR.
+
+
+
+
+
+
 - Autenticación con JWT.
 - Interfaz responsive, accesible con teclado, y que respeta `prefers-reduced-motion`.
 
