@@ -13,8 +13,17 @@ class GradCAMPlusPlus:
         self.gradients = None
         self.activations = None
 
-        self.target_layer.register_forward_hook(self.save_activation)
-        self.target_layer.register_full_backward_hook(self.save_gradient)
+        self._hooks = [
+            self.target_layer.register_forward_hook(self.save_activation),
+            self.target_layer.register_full_backward_hook(self.save_gradient),
+        ]
+
+    def remove_hooks(self):
+        # el modelo es compartido entre peticiones: sin esto cada análisis deja dos hooks
+        # más en la capa y cada uno retiene sus tensores
+        for hook in self._hooks:
+            hook.remove()
+        self._hooks = []
 
     def save_activation(self, module, input, output):
         self.activations = output.detach()
