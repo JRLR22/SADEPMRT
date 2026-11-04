@@ -7,14 +7,20 @@ from app.models.user import UserRole
 class UserBase(BaseModel):
     email: EmailStr
     full_name: str = Field(..., min_length=3, max_length=255)
-    role: UserRole = UserRole.VIEWER
     license_number: Optional[str] = None
     institution: Optional[str] = None
     specialty: Optional[str] = None
 
 
 class UserCreate(UserBase):
+    # el registro es público: el rol no se elige aquí, lo asigna un administrador
+    model_config = ConfigDict(extra="forbid")
+
     password: str = Field(..., min_length=8, max_length=100)
+
+
+class RoleUpdate(BaseModel):
+    role: UserRole
 
 
 class UserUpdate(BaseModel):
@@ -32,6 +38,7 @@ class UserLogin(BaseModel):
 
 class UserResponse(UserBase):
     id: str        # uuid guardado como texto
+    role: UserRole
     is_active: bool
     is_verified: bool
     created_at: datetime

@@ -27,7 +27,9 @@ Spanish.
 - Interactive slider comparing the original X-ray with the Grad-CAM heatmap.
 - History with filters and CSV export, PDF report per study, per-patient view and dashboard.
 - Radiologist validation workflow (`admin` / `radiologist` roles), with audit log and FHIR export.
-- JWT authentication.
+- JWT authentication. Public sign-up creates read-only (`viewer`) accounts; only an administrator can
+  assign other roles, through `GET /auth/users` and `PUT /auth/users/{id}/role`, and every change is
+  recorded in the audit log.
 - Responsive, keyboard-accessible interface that respects `prefers-reduced-motion`.
 
 ## Tech stack

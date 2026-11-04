@@ -27,7 +27,9 @@ Combina un ensemble de tres modelos de clasificación por enfermedad con tres vi
 - Historial con filtros y exportación a CSV, informe en PDF por estudio, vista por paciente y dashboard.
 - Flujo de validación por radiólogo (roles `admin` / `radiologist`), con registro de auditoría y
   exportación FHIR.
-- Autenticación con JWT.
+- Autenticación con JWT. El registro público crea cuentas de solo lectura (`viewer`); solo un administrador
+  puede asignar otros roles, con `GET /auth/users` y `PUT /auth/users/{id}/role`, y cada cambio queda en
+  la auditoría.
 - Interfaz responsive, accesible con teclado, y que respeta `prefers-reduced-motion`.
 
 ## Tecnologías
