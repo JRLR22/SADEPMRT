@@ -1,5 +1,11 @@
 # rt26 · Diagnóstico pulmonar asistido por IA
 
+[![CI](https://github.com/JRLR22/SADEPMRT/actions/workflows/ci.yml/badge.svg)](https://github.com/JRLR22/SADEPMRT/actions/workflows/ci.yml)
+[![Licencia: AGPL-3.0](https://img.shields.io/badge/licencia-AGPL--3.0-blue)](LICENSE)
+[![Modelos en Hugging Face](https://img.shields.io/badge/modelos-Hugging%20Face-yellow)](https://huggingface.co/JRLR22/rt26-models)
+
+[English version](README.en.md)
+
 https://github.com/user-attachments/assets/a1798fa8-626f-40df-bc2e-557830e157bf
 
 *Voz generada con [elevenlabs.io](https://elevenlabs.io).*
@@ -32,6 +38,7 @@ Combina un ensemble de tres modelos de clasificación por enfermedad con tres vi
 | Modelos | DenseNet121, ResNet50, EfficientNet-B0 (ensemble) · YOLOv8 · U-Net con ResNet34 |
 | Frontend | React (Create React App), Recharts, lucide-react |
 | Despliegue | Docker Compose + Nginx |
+| Calidad | pytest, Jest, GitHub Actions |
 
 ## Datasets y créditos
 
@@ -185,12 +192,38 @@ aparte en `http://localhost:8001` (un agente local con Ollama) que **no forma pa
 El resto de la aplicación funciona normalmente sin él. Si tienes ese servicio corriendo, actívalo con
 `REACT_APP_ENABLE_CHAT=true` en `frontend-react2/.env` y reinicia `npm start`.
 
+## Pruebas
+
+```powershell
+cd backend
+pip install -r requirements-dev.txt
+pytest
+```
+
+Las pruebas del backend cubren la configuración, la seguridad, la validación de archivos, la inferencia,
+todos los endpoints de la API (permisos por rol, auditoría, límite de peticiones, PDF, DICOM), `init_db.py`
+y `download_models.py`. Usan una base de datos y una carpeta temporales y modelos con pesos aleatorios, así
+que no tocan tus datos. Una prueba adicional arranca la API con los modelos reales y se omite si no se han
+descargado.
+
+En el frontend, `npm test` ejecuta una prueba de humo de la pantalla de inicio de sesión.
+
+GitHub Actions ejecuta ambas en cada push a `main` y en cada pull request, con los modelos descargados de
+Hugging Face.
+
 ## Estructura
 
 ```
-backend/            API FastAPI, modelos de datos, servicios de inferencia
-frontend-react2/    Interfaz React (la versión actual)
-docker-compose*.yml Despliegue con Nginx
+backend/
+  main.py             arranque, middleware y registro de rutas
+  app/api/            endpoints: auth, análisis, estudios, informes, dashboard, estado
+  app/core/           seguridad (JWT), validación de archivos y límite de peticiones
+  app/services/       inferencia (ensemble, Grad-CAM, YOLO, U-Net), registros y almacenamiento
+  app/models/         modelos de base de datos (SQLAlchemy)
+  tests/              pruebas con pytest
+  download_models.py  descarga de los modelos de Hugging Face
+frontend-react2/      interfaz React
+docker-compose*.yml   despliegue con Nginx
 ```
 
 ## Licencia
