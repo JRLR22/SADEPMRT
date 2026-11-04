@@ -1,6 +1,6 @@
 # rt26 · Diagnóstico pulmonar asistido por IA
 
-[![CI](https://github.com/JRLR22/SADEPMRT/actions/workflows/ci.yml/badge.svg)](https://github.com/JRLR22/SADEPMRT/actions/workflows/ci.yml)
+[![CI](https://github.com/JRLR22/rt26-chest-xray/actions/workflows/ci.yml/badge.svg)](https://github.com/JRLR22/rt26-chest-xray/actions/workflows/ci.yml)
 [![Licencia: AGPL-3.0](https://img.shields.io/badge/licencia-AGPL--3.0-blue)](LICENSE)
 [![Modelos en Hugging Face](https://img.shields.io/badge/modelos-Hugging%20Face-yellow)](https://huggingface.co/JRLR22/rt26-models)
 

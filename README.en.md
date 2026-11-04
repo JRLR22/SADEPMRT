@@ -1,6 +1,6 @@
 # rt26 · AI-assisted chest X-ray analysis
 
-[![CI](https://github.com/JRLR22/SADEPMRT/actions/workflows/ci.yml/badge.svg)](https://github.com/JRLR22/SADEPMRT/actions/workflows/ci.yml)
+[![CI](https://github.com/JRLR22/rt26-chest-xray/actions/workflows/ci.yml/badge.svg)](https://github.com/JRLR22/rt26-chest-xray/actions/workflows/ci.yml)
 [![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue)](LICENSE)
 [![Models on Hugging Face](https://img.shields.io/badge/models-Hugging%20Face-yellow)](https://huggingface.co/JRLR22/rt26-models)
 
