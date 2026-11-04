@@ -110,7 +110,6 @@ def validate_config():
         "TB DenseNet":           settings.TB_DENSENET_PATH,
         "TB ResNet":             settings.TB_RESNET_PATH,
         "TB EfficientNet":       settings.TB_EFFICIENT_PATH,
-        "YOLOv8":                settings.YOLO_MODEL_PATH,
         "U-Net":                 settings.UNET_MODEL_PATH,
     }
 
@@ -120,7 +119,11 @@ def validate_config():
         raise FileNotFoundError(
             "\nMODELOS NO ENCONTRADOS:\n" +
             "\n".join(f"  - {m}" for m in missing) +
-            f"\n\nCopia los .pth y .pt a: {settings.MODELS_DIR}\n"
+            "\n\nDescárgalos con: python download_models.py\n"
         )
+
+    # yolo es opcional: sus pesos no se publican (datos de entrenamiento solo para uso no comercial)
+    if not settings.YOLO_MODEL_PATH.exists():
+        print(f"AVISO: no está {settings.YOLO_MODEL_PATH.name}; la detección YOLO queda desactivada.")
 
     print("Configuración validada")

@@ -39,6 +39,8 @@ licencia exacta en la página de cada dataset antes de redistribuir imágenes.
 | [Chest X-Ray Images (Pneumonia)](https://www.kaggle.com/datasets/paultimothymooney/chest-xray-pneumonia) | Kermany, Zhang, Goldbaum. Datos originales: [Mendeley Data, DOI 10.17632/rscbjbr9sj.2](https://doi.org/10.17632/rscbjbr9sj.2). Pacientes pediátricos de 1 a 5 años | CC BY 4.0 (indicada en Mendeley Data) |
 | [COVID-19 Radiography Database](https://www.kaggle.com/datasets/tawsifurrahman/covid19-radiography-database) | Chowdhury, Rahman, Khandakar et al. | Ver la página del dataset |
 | [Tuberculosis (TB) Chest X-ray Database](https://www.kaggle.com/datasets/tawsifurrahman/tuberculosis-tb-chest-xray-dataset) | Rahman, Khandakar et al. | Ver la página del dataset |
+| [Pulmonary Chest X-Ray Abnormalities](https://www.kaggle.com/datasets/kmader/pulmonary-chest-xray-abnormalities) (U-Net) | Conjuntos Montgomery County y Shenzhen de la U.S. National Library of Medicine. Las máscaras de pulmón son las de Montgomery (138 radiografías) | Datos públicos de la NLM; se pide citar la fuente |
+| [VinBigData Chest X-ray Abnormalities Detection](https://www.kaggle.com/competitions/vinbigdata-chest-xray-abnormalities-detection) (YOLO) | Vingroup Big Data Institute, a partir de VinDr-CXR | Solo uso no comercial y de investigación; los datos no se pueden redistribuir |
 
 **Referencias a citar**
 
@@ -49,6 +51,18 @@ licencia exacta en la página de cada dataset antes de redistribuir imágenes.
 - T. Rahman et al., "Reliable Tuberculosis Detection using Chest X-ray with Deep Learning, Segmentation and
   Visualization", *IEEE Access* 8:191586–191601, 2020. DOI
   [10.1109/ACCESS.2020.3031384](https://doi.org/10.1109/ACCESS.2020.3031384).
+- S. Jaeger et al., "Two public chest X-ray datasets for computer-aided screening of pulmonary diseases",
+  *Quantitative Imaging in Medicine and Surgery* 4(6):475–477, 2014.
+- S. Jaeger et al., "Automatic tuberculosis screening using chest radiographs", *IEEE Transactions on
+  Medical Imaging* 33(2):233–245, 2014. DOI [10.1109/TMI.2013.2284099](https://doi.org/10.1109/TMI.2013.2284099).
+- S. Candemir et al., "Lung segmentation in chest radiographs using anatomical atlases with nonrigid
+  registration", *IEEE Transactions on Medical Imaging* 33(2):577–590, 2014. DOI
+  [10.1109/TMI.2013.2290491](https://doi.org/10.1109/TMI.2013.2290491).
+- H. Q. Nguyen et al., "VinDr-CXR: An open dataset of chest X-rays with radiologist's annotations",
+  *Scientific Data* 9:429, 2022. DOI [10.1038/s41597-022-01498-w](https://doi.org/10.1038/s41597-022-01498-w).
+
+Los conjuntos Montgomery y Shenzhen proceden de la National Library of Medicine (National Institutes of
+Health, Bethesda, MD, USA) y del Shenzhen No.3 People's Hospital (Guangdong Medical College, Shenzhen, China).
 
 ### Imágenes de ejemplo
 
@@ -90,19 +104,25 @@ Lecturas recomendadas sobre este problema:
 
 ## Cómo ejecutarlo
 
-Requisitos: Python 3.11, Node.js 18+ y los **archivos de modelo** (no están en el repositorio por su tamaño,
-unos 1.3 GB).
+Requisitos: Python 3.11 y Node.js 18+.
 
 ### 1. Modelos
 
-Copia estos archivos a `backend/models/`:
+Los modelos no están en este repositorio. Se publican en
+[Hugging Face](https://huggingface.co/JRLR22/rt26-models) (unos 500 MB, licencia CC BY-NC 4.0) y se
+descargan con `python download_models.py`, dentro del paso 2. El script solo baja lo que falta, usa una
+versión fija del repositorio de modelos y comprueba el SHA-256 de cada archivo. Con `--verify` comprueba
+también los que ya tengas.
 
-```
-pneumonia_densenet121.pth   pneumonia_resnet50.pth   pneumonia_efficientnet_b0.pth
-covid_19_densenet121.pth    covid_19_resnet50.pth    covid_19_efficientnet_b0.pth
-tuberculosis_densenet121.pth tuberculosis_resnet50.pth tuberculosis_efficientnet_b0.pth
-unet_resnet34_best.pth      yolov8_chest_best.pt
-```
+En la [ficha de los modelos](https://huggingface.co/JRLR22/rt26-models) están los datos de entrenamiento,
+las métricas y las limitaciones.
+
+#### Detección YOLO (opcional)
+
+Los pesos de YOLO **no se publican**: se entrenaron con los datos de la competición VinBigData, cuyas reglas
+limitan su uso a fines no comerciales y de investigación. Sin ese archivo, la aplicación funciona igual y
+oculta la vista YOLO. Si tienes acceso a esos datos y entrenas tu propio detector YOLOv8 con sus 14 clases,
+guárdalo como `backend/models/yolov8_chest_best.pt` y se activará al reiniciar el backend.
 
 ### 2. Backend
 
@@ -111,6 +131,7 @@ cd backend
 python -m venv venv
 .\venv\Scripts\Activate.ps1
 pip install -r requirements.txt
+python download_models.py   # descarga los modelos de Hugging Face
 copy .env.example .env      # y define un SECRET_KEY propio
 python init_db.py           # crea la base de datos y un usuario administrador inicial
 $env:PYTHONUTF8=1; python main.py
@@ -143,6 +164,9 @@ REACT_APP_DEMO_PASSWORD=contraseña-de-la-cuenta-demo
 
 ### Con Docker
 
+Antes, descarga los modelos en tu equipo (paso 2 hasta `python download_models.py`): el contenedor los
+monta desde `backend/models/` en modo de solo lectura.
+
 ```powershell
 copy backend\.env.example .env   # define SECRET_KEY, DATABASE_URL, ALLOWED_ORIGINS…
 docker-compose up --build
@@ -167,4 +191,6 @@ docker-compose*.yml Despliegue con Nginx
 
 ## Licencia
 
-Pendiente de definir por el autor. Los datasets mantienen la licencia y los términos de sus autores originales.
+El código está pendiente de licencia. Los pesos publicados en Hugging Face usan
+[CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/). Los datasets mantienen la licencia y los
+términos de sus autores originales.

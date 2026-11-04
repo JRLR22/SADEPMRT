@@ -37,6 +37,7 @@ reportlab==4.2.0
 # utilidades
 loguru==0.7.2
 pytz==2026.2
+huggingface_hub==1.15.0
 python-dotenv==1.0.1
 pydantic==2.7.1
 pydantic-settings==2.2.1

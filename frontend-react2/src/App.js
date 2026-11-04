@@ -620,7 +620,8 @@ function Dashboard() {
               hint: 'mAP50: qué tan bien YOLO localiza lesiones en la radiografía (1.0 = perfecto).' },
             { label: 'U-Net Dice',  value: system_metrics.unet_dice,             note: 'contorno pulmonar',
               hint: 'Dice: qué tanto coincide el contorno de pulmón dibujado por U-Net con el real (1.0 = idéntico).' },
-          ].map(({ label, value, note, hint }) => (
+          // el backend manda null en las métricas de modelos que no están cargados (YOLO es opcional)
+          ].filter(({ value }) => value != null).map(({ label, value, note, hint }) => (
             <div key={label} title={hint}>
               <div style={{ fontSize: 20, fontWeight: 800, color: T.primary, letterSpacing: '-0.02em' }}>{value}</div>
               <div style={{ fontSize: 11, color: T.textMid, marginTop: 2, fontWeight: 500 }}>{label}</div>
@@ -1920,7 +1921,7 @@ function Analysis() {
                   { key: 'gradcam', label: 'Grad-CAM',  Icon: Eye },
                   { key: 'yolo',    label: `YOLO (${result.yolo?.total ?? 0})`, Icon: Search },
                   { key: 'seg',     label: 'Segmentación', Icon: Layers },
-                ].map(t => (
+                ].filter(t => t.key !== 'yolo' || result.yolo?.available !== false).map(t => (
                   <button key={t.key} role="tab" aria-selected={activeTab === t.key}
                     onClick={() => setActiveTab(t.key)} style={{
                     ...btn(activeTab === t.key ? 'primary' : 'ghost', { fontSize: 12, padding: '6px 12px' }),

@@ -259,9 +259,12 @@ async def lifespan(app: FastAPI):
             'efficient': _load_efficientnet(cfg['efficient'], nc, device),
         }
 
-    logger.info("   Cargando YOLOv8...")
-    from ultralytics import YOLO
-    yolo_model = YOLO(str(settings.YOLO_MODEL_PATH))
+    if settings.YOLO_MODEL_PATH.exists():
+        logger.info("   Cargando YOLOv8...")
+        from ultralytics import YOLO
+        yolo_model = YOLO(str(settings.YOLO_MODEL_PATH))
+    else:
+        logger.warning("   YOLOv8 no encontrado: la detección queda desactivada")
 
     logger.info("   Cargando U-Net...")
     unet_model = _load_unet(settings.UNET_MODEL_PATH, device)
@@ -530,7 +533,8 @@ async def health_check():
         "yolo":         yolo_model is not None,
         "unet":         unet_model is not None,
     }
-    all_models_ok = all(models_status.values())
+    # yolo es opcional: su ausencia no marca el servicio como degradado
+    all_models_ok = all(ok for name, ok in models_status.items() if name != "yolo")
     overall_ok    = db_status == "ok" and all_models_ok
 
     return JSONResponse(
@@ -580,7 +584,7 @@ async def _predict(
 
     yolo_url   = None
     detections = []
-    if run_yolo_flag:
+    if run_yolo_flag and yolo_model is not None:
         yolo_bytes, detections = run_yolo(contents)
         yolo_url = storage_service.upload_image(
             yolo_bytes, _unique_name("yolo"), "yolo"
@@ -1335,7 +1339,7 @@ async def predict_auto(
 
         yolo_url   = None
         detections = []
-        if run_yolo_flag:
+        if run_yolo_flag and yolo_model is not None:
             yolo_bytes, detections = run_yolo(contents)
             yolo_url = storage_service.upload_image(
                 yolo_bytes, _unique_name("yolo"), "yolo"
@@ -1350,8 +1354,9 @@ async def predict_auto(
 
         top_name   = top_disease.upper()
         top_conf   = top_result['confidence'] * 100
-        conclusion = f"Mayor probabilidad de hallazgo: {top_name} ({top_conf:.1f}%). "
-        conclusion += f"YOLO detectó {len(detections)} hallazgo(s) en la radiografía."
+        conclusion = f"Mayor probabilidad de hallazgo: {top_name} ({top_conf:.1f}%)."
+        if yolo_url:
+            conclusion += f" YOLO detectó {len(detections)} hallazgo(s) en la radiografía."
 
         processing_ms = (time.time() - start) * 1000
         clinical      = get_clinical_interpretation(top_result['confidence'], top_disease)
@@ -1383,8 +1388,8 @@ async def predict_auto(
             "conclusion":  conclusion,
             "gradcam":     {"available": True, "heatmap_image": gradcam_url,
                             "analyzed_disease": top_disease},
-            "yolo":        {"image_url": yolo_url, "detections": detections,
-                            "total": len(detections)},
+            "yolo":        {"available": yolo_url is not None, "image_url": yolo_url,
+                            "detections": detections, "total": len(detections)},
             "segmentation":{"image_url": seg_url},
             "processing_time_ms": processing_ms,
         }
@@ -1473,7 +1478,7 @@ async def predict_dicom(
 
         yolo_url   = None
         detections = []
-        if run_yolo_flag:
+        if run_yolo_flag and yolo_model is not None:
             yolo_bytes, detections = run_yolo(png_bytes)
             yolo_url = storage_service.upload_image(
                 yolo_bytes, _unique_name("yolo"), "yolo"
@@ -1512,8 +1517,8 @@ async def predict_dicom(
         conclusion = (
             f"Mayor probabilidad: {top_result['label']} "
             f"({top_result['probability_disease']*100:.1f}%). "
-            f"YOLO detectó {len(detections)} hallazgo(s). "
-            "Metadatos DICOM extraídos correctamente."
+            + (f"YOLO detectó {len(detections)} hallazgo(s). " if yolo_url else "")
+            + "Metadatos DICOM extraídos correctamente."
         )
 
         return {
@@ -1524,7 +1529,8 @@ async def predict_dicom(
             "ranking":        ranking_list,
             "conclusion":     conclusion,
             "gradcam":        {"heatmap_image": gradcam_url, "analyzed_disease": top_disease},
-            "yolo":           {"image_url": yolo_url, "detections": detections, "total": len(detections)},
+            "yolo":           {"available": yolo_url is not None, "image_url": yolo_url,
+                               "detections": detections, "total": len(detections)},
             "segmentation":   {"image_url": seg_url},
         }
 
@@ -1652,7 +1658,7 @@ async def dashboard_stats(
             "covid_accuracy":        "98.50%",
             "tuberculosis_accuracy": "97.80%",
             "avg_accuracy":          "96.35%",
-            "yolo_map50":            "39.3%",
+            "yolo_map50":            "39.3%" if yolo_model is not None else None,
             "unet_dice":             "96.24%",
         }
     }
