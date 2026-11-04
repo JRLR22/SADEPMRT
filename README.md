@@ -21,12 +21,6 @@ Combina un ensemble de tres modelos de clasificación por enfermedad con tres vi
 - Historial con filtros y exportación a CSV, informe en PDF por estudio, vista por paciente y dashboard.
 - Flujo de validación por radiólogo (roles `admin` / `radiologist`), con registro de auditoría y
   exportación FHIR.
-
-
-
-
-
-
 - Autenticación con JWT.
 - Interfaz responsive, accesible con teclado, y que respeta `prefers-reduced-motion`.
 
