@@ -195,6 +195,11 @@ docker-compose*.yml Despliegue con Nginx
 
 ## Licencia
 
-El código está pendiente de licencia. Los pesos publicados en Hugging Face usan
-[CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/). Los datasets mantienen la licencia y los
-términos de sus autores originales.
+- **Código:** [GNU AGPL-3.0](LICENSE), la misma licencia que `ultralytics`, del que depende el backend.
+  Puedes usarlo y modificarlo, pero si lo distribuyes o lo ofreces como servicio en red debes publicar
+  el código fuente con la misma licencia.
+- **Pesos de los modelos** (Hugging Face): [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/),
+  solo uso no comercial.
+- **Datasets:** mantienen la licencia y los términos de sus autores originales.
+
+Copyright © 2026 Raúl López.
